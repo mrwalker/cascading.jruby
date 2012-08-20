@@ -377,6 +377,21 @@ class TC_Assembly < Test::Unit::TestCase
 
     assert_equal ['name', 'score1', 'score2', 'id', 'name_', 'id_', 'town'], assembly.scope.values_fields.to_a
     assert_equal ['name', 'id', 'name_', 'id_'], assembly.scope.grouping_fields.to_a
+    
+    assembly = mock_two_input_assembly do
+      hash_join 'test1', 'test2', :on => 'id'
+    end
+
+    assert_equal Java::CascadingPipe::HashJoin, assembly.tail_pipe.class
+    left_grouping_fields = assembly.tail_pipe.key_selectors['test1']
+    assert_equal ['id'], left_grouping_fields.to_a
+    right_grouping_fields = assembly.tail_pipe.key_selectors['test2']
+    assert_equal ['id'], right_grouping_fields.to_a
+    assert_equal ['name', 'score1', 'score2', 'id', 'name_', 'id_', 'town'], assembly.scope.values_fields.to_a
+    # NOTE: Since HashJoin doesn't do any grouping but is implemented as a GROUP
+    # only one of the key fields is chosen as the output grouping field.
+    assert_equal ['id'], assembly.scope.grouping_fields.to_a
+
   end
 
   def test_create_join_with_declared_fields
@@ -410,56 +425,139 @@ class TC_Assembly < Test::Unit::TestCase
   end
 
   def test_join_undefined_inputs
-    ex = assert_raise RuntimeError do
-      flow 'test_join_undefined_inputs' do
-        source 'data1', tap('test/data/data1.txt')
+    [:join, :hash_join].each do |join|
+      ex = assert_raise RuntimeError do
+        flow 'test_join_undefined_inputs' do
+          source 'data1', tap('test/data/data1.txt')
 
-        assembly 'data1' do
-          pass
+          assembly 'data1' do
+            pass
+          end
+
+          assembly 'join' do
+            send(join, 'doesnotexist', 'data1', :on => 'name')
+          end
+
+          sink 'join', tap('output/test_join_undefined_inputs')
         end
-
-        assembly 'join' do
-          join 'doesnotexist', 'data1', :on => 'name'
-        end
-
-        sink 'join', tap('output/test_join_undefined_inputs')
       end
+      assert_equal "Could not find assembly 'doesnotexist' from 'join'", ex.message
     end
-    assert_equal "Could not find assembly 'doesnotexist' from 'join'", ex.message
   end
 
   def test_join_without_on
-    ex = assert_raise RuntimeError do
-      mock_two_input_assembly do
-        join 'test1', 'test2'
+    [:join, :hash_join].each do |join|
+      ex = assert_raise RuntimeError do
+        mock_two_input_assembly do
+          send(join, 'test1', 'test2')
+        end
       end
+      assert_equal 'join requires :on parameter', ex.message
     end
-    assert_equal 'join requires :on parameter', ex.message
   end
 
   def test_join_invalid_on
-    ex = assert_raise RuntimeError do
-      mock_two_input_assembly do
-        join 'test1', 'test2', :on => 1
+    [:join, :hash_join].each do |join|
+      ex = assert_raise RuntimeError do
+        mock_two_input_assembly do
+          send(join, 'test1', 'test2', :on => 1)
+        end
       end
+      assert_equal "Unsupported data type for :on in join: 'Fixnum'", ex.message
     end
-    assert_equal "Unsupported data type for :on in join: 'Fixnum'", ex.message
   end
 
   def test_join_empty_on
-    ex = assert_raise RuntimeError do
-      mock_two_input_assembly do
-        join 'test1', 'test2', :on => []
+    [:join, :hash_join].each do |join|
+      ex = assert_raise RuntimeError do
+        mock_two_input_assembly do
+          send(join, 'test1', 'test2', :on => [])
+        end
       end
-    end
-    assert_equal "join requires non-empty :on parameter", ex.message
+      assert_equal "join requires non-empty :on parameter", ex.message
 
-    ex = assert_raise RuntimeError do
+      ex = assert_raise RuntimeError do
+        mock_two_input_assembly do
+          send(join, 'test1', 'test2', :on => {})
+        end
+      end
+      assert_equal "join requires non-empty :on parameter", ex.message
+    end
+  end
+
+  def test_create_hash_join
+    assembly = mock_two_input_assembly do
+      hash_join 'test1', 'test2', :on => 'id'
+    end
+
+    assert_equal Java::CascadingPipe::HashJoin, assembly.tail_pipe.class
+    left_grouping_fields = assembly.tail_pipe.key_selectors['test1']
+    assert_equal ['id'], left_grouping_fields.to_a
+    right_grouping_fields = assembly.tail_pipe.key_selectors['test2']
+    assert_equal ['id'], right_grouping_fields.to_a
+    assert_equal ['name', 'score1', 'score2', 'id', 'name_', 'id_', 'town'], assembly.scope.values_fields.to_a
+    # NOTE: Since HashJoin doesn't do any grouping but is implemented as a GROUP
+    # only one of the key fields is chosen as the output grouping field.
+    assert_equal ['id'], assembly.scope.grouping_fields.to_a
+
+    assembly = mock_two_input_assembly do
+      hash_join 'test1', 'test2', :on => 'name'
+    end
+
+    assert_equal Java::CascadingPipe::HashJoin, assembly.tail_pipe.class
+    left_grouping_fields = assembly.tail_pipe.key_selectors['test1']
+    assert_equal ['name'], left_grouping_fields.to_a
+    right_grouping_fields = assembly.tail_pipe.key_selectors['test2']
+    assert_equal ['name'], right_grouping_fields.to_a
+    assert_equal ['name', 'score1', 'score2', 'id', 'name_', 'id_', 'town'], assembly.scope.values_fields.to_a
+    # NOTE: Since HashJoin doesn't do any grouping but is implemented as a GROUP
+    # only one of the key fields is chosen as the output grouping field.
+    assert_equal ['name'], assembly.scope.grouping_fields.to_a
+  end
+
+  def create_hash_join_many_fields
+        assembly = mock_two_input_assembly do
+      hash_join 'test1', 'test2', :on => ['name', 'id']
+    end
+
+    assert_equal Java::CascadingPipe::HashJoin, assembly.tail_pipe.class
+
+    left_grouping_fields = assembly.tail_pipe.key_selectors['test1']
+    assert_equal ['name', 'id'], left_grouping_fields.to_a
+
+    right_grouping_fields = assembly.tail_pipe.key_selectors['test2']
+    assert_equal ['name', 'id'], right_grouping_fields.to_a
+
+    assert_equal ['name', 'score1', 'score2', 'id', 'name_', 'id_', 'town'], assembly.scope.values_fields.to_a
+    assert_equal ['name', 'id'], assembly.scope.grouping_fields.to_a
+  end
+
+  def create_hash_join_with_declared_fields
+    assembly = mock_two_input_assembly do
+      hash_join 'test1', 'test2', :on => 'name', :declared_fields => ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+    end
+
+    assert_equal Java::CascadingPipe::HashJoin, assembly.tail_pipe.class
+
+    left_grouping_fields = assembly.tail_pipe.key_selectors['test1']
+    assert_equal ['name'], left_grouping_fields.to_a
+
+    right_grouping_fields = assembly.tail_pipe.key_selectors['test2']
+    assert_equal ['name'], right_grouping_fields.to_a
+
+    assert_equal ['a', 'b', 'c', 'd', 'e', 'f', 'g'], assembly.scope.values_fields.to_a
+    assert_equal ['name'], assembly.scope.grouping_fields.to_a
+  end
+
+  def test_hash_join_with_block
+    ex = assert_raise ArgumentError do
       mock_two_input_assembly do
-        join 'test1', 'test2', :on => {}
+        hash_join 'test1', 'test2', :on => 'name' do
+          count
+        end
       end
     end
-    assert_equal "join requires non-empty :on parameter", ex.message
+    assert_equal "hash joins don't support aggregations", ex.message
   end
 
   def test_branch_unique

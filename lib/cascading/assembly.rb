@@ -105,9 +105,7 @@ module Cascading
       "#{name} : head pipe : #{head_pipe} - tail pipe: #{tail_pipe}"
     end
 
-    # Builds a join (CoGroup) pipe. Requires a list of assembly names to join
-    # and :on to specify the group_fields.
-    def join(*args, &block)
+    def prepare_join(*args, &block)
       options = args.extract_options!
 
       pipes, _ = populate_incoming_scopes(args)
@@ -135,6 +133,7 @@ module Cascading
       incoming_fields = @incoming_scopes.map{ |s| s.values_fields }
       declared_fields = fields(options[:declared_fields] || dedup_fields(*incoming_fields))
       joiner = options[:joiner]
+      is_hash_join = options[:hash] || false
 
       case joiner
       when :inner, 'inner', nil
@@ -155,15 +154,48 @@ module Cascading
         end
         joiner = Java::CascadingPipeJoiner::MixedJoin.new(joiner.to_java(:boolean))
       end
-      result_group_fields = dedup_fields(*group_fields)
-      parameters = [
-        pipes.to_java(Java::CascadingPipe::Pipe),
-        group_fields,
-        declared_fields,
-        result_group_fields,
-        joiner
-      ]
-      apply_aggregations(Java::CascadingPipe::CoGroup.new(*parameters), @incoming_scopes, &block)
+
+      if is_hash_join
+        raise ArgumentError, "hash joins don't support aggregations" if block_given?
+        parameters = [
+          pipes.to_java(Java::CascadingPipe::Pipe),
+          group_fields,
+          declared_fields,
+          joiner
+        ]
+        group_assembly = Java::CascadingPipe::HashJoin.new(*parameters)
+      else
+        result_group_fields = dedup_fields(*group_fields)
+        parameters = [
+          pipes.to_java(Java::CascadingPipe::Pipe),
+          group_fields,
+          declared_fields,
+          result_group_fields,
+          joiner
+        ]
+        group_assembly = Java::CascadingPipe::CoGroup.new(*parameters)
+      end
+      apply_aggregations(group_assembly, @incoming_scopes, &block)
+    end
+    private :prepare_join
+
+    # Builds a HashJoin pipe. This should be used carefully, as the right side
+    # of the join is accumulated entirely in memory. Requires a list of assembly
+    # names to join and :on to specify the join_fields.
+    def hash_join(*args, &block)
+      options = args.extract_options!
+      options[:hash] = true
+      args << options
+      prepare_join(*args, &block)
+    end
+
+    # Builds a join (CoGroup) pipe. Requires a list of assembly names to join
+    # and :on to specify the group_fields.
+    def join(*args, &block)
+      options = args.extract_options!
+      options[:hash] = false
+      args << options
+      prepare_join(*args, &block)
     end
     alias co_group join
 
