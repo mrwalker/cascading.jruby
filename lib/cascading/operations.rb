@@ -39,44 +39,6 @@ module Cascading
       aggregator_function(args, Java::CascadingOperationAggregator::Last)
     end
 
-    def regex_parser(*args)
-      options = args.extract_options!
-
-      pattern = args[0].to_s
-      fields = Cascading.fields(options[:fields])
-      groups = options[:groups].to_java(:int) if options[:groups]
-      parameters = [fields, pattern, groups].compact
-
-      Java::CascadingOperationRegex::RegexParser.new(*parameters)
-    end
-
-    def regex_splitter(*args)
-      options = args.extract_options!
-
-      fields = Cascading.fields(args)
-      pattern = options[:pattern].to_s
-      parameters = [fields, pattern].compact
-      Java::CascadingOperationRegex::RegexSplitter.new(*parameters)
-    end
-
-    def regex_split_generator(*args)
-      options = args.extract_options!
-
-      fields = Cascading.fields(args)
-      pattern = options[:pattern].to_s
-      parameters = [fields, pattern].compact
-      Java::CascadingOperationRegex::RegexSplitGenerator.new(*parameters)
-    end
-
-    def regex_generator(*args)
-      options = args.extract_options!
-
-      fields = Cascading.fields(args)
-      pattern = options[:pattern].to_s
-      parameters = [fields, pattern].compact
-      Java::CascadingOperationRegex::RegexGenerator.new(*parameters)
-    end
-
     def expression_function(*args)
       options = args.extract_options!
 
@@ -175,18 +137,6 @@ module Cascading
       match_each_element = options[:match_each_element]
       parameters = [pattern.to_s, remove_match, match_each_element].compact
       Java::CascadingOperationRegex::RegexFilter.new(*parameters)
-    end
-
-    def regex_replace(*args)
-      options = args.extract_options!
-
-      fields = fields(args[0])
-      pattern = args[1]
-      replacement = args[2]
-      replace_all = options[:replace_all]
-
-      parameters = [fields, pattern.to_s, replacement.to_s, replace_all].compact
-      Java::CascadingOperationRegex::RegexReplace.new(*parameters)
     end
 
     def field_joiner(*args)

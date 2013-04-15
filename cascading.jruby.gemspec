@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.description = "cascading.jruby is a small DSL above Cascading, written in JRuby"
   s.email = "mwalker@etsy.com"
   s.extra_rdoc_files = ["LICENSE.txt"]
-  s.files = ["lib/cascading.rb", "lib/cascading/aggregations.rb", "lib/cascading/assembly.rb", "lib/cascading/base.rb", "lib/cascading/cascade.rb", "lib/cascading/cascading.rb", "lib/cascading/cascading_exception.rb", "lib/cascading/expr_stub.rb", "lib/cascading/ext/array.rb", "lib/cascading/flow.rb", "lib/cascading/mode.rb", "lib/cascading/operations.rb", "lib/cascading/scope.rb", "lib/cascading/sub_assembly.rb", "lib/cascading/tap.rb"]
+  s.files = Dir.glob("lib/**/*.rb")
   s.homepage = "http://github.com/etsy/cascading.jruby"
   s.rdoc_options = ["--main", "README.md"]
   s.require_paths = ["lib"]

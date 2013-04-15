@@ -9,8 +9,7 @@ cascade 'branch', :mode => :local do
     source 'input', tap('samples/data/data2.txt')
 
     assembly 'input' do
-      split 'line', ['name', 'score1', 'score2', 'id'], :pattern => /[.,]*\s+/
-
+      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id']
       branch 'branch1' do
         group_by 'score1' do
           count

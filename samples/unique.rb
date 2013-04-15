@@ -10,7 +10,7 @@ cascade 'unique', :mode => :local do
     source 'input', tap('samples/data/data_group_by.tsv')
 
     assembly 'input' do
-      split 'line', ['id', 'city'], :output => ['id', 'city']
+      split 'line', /\t/, ['id', 'city'], :output => ['id', 'city']
 
       branch 'unique' do
         sub_assembly Java::CascadingPipeAssembly::Unique.new(tail_pipe, fields('city'))

@@ -22,7 +22,7 @@ context Cascading::Scope do
       check_scope :values_fields => ['offset', 'line']
       assert_size_equals 2
 
-      split 'line', ['x', 'y'], :pattern => /,/
+      split 'line', /,/, ['x', 'y']
       check_scope :values_fields => ['offset', 'line', 'x', 'y']
       assert_size_equals 4
     end
@@ -33,7 +33,7 @@ context Cascading::Scope do
       check_scope :values_fields => ['offset', 'line']
       assert_size_equals 2
 
-      split 'line', ['x', 'y'], :pattern => /,/, :output => ['x', 'y']
+      split 'line', /,/, ['x', 'y'], :output => ['x', 'y']
       check_scope :values_fields => ['x', 'y']
       assert_size_equals 2
     end

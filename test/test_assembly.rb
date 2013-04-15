@@ -661,7 +661,7 @@ class TC_Assembly < Test::Unit::TestCase
 
   def test_empty_where
     assembly = mock_assembly do
-      split 'line', ['name', 'score1', 'score2', 'id'], :pattern => /[.,]*\s+/, :output => ['name', 'score1', 'score2', 'id']
+      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
       where
     end
     assert_equal Java::CascadingPipe::Each, assembly.tail_pipe.class
@@ -672,7 +672,7 @@ class TC_Assembly < Test::Unit::TestCase
 
   def test_where
     assembly = mock_assembly do
-      split 'line', ['name', 'score1', 'score2', 'id'], :pattern => /[.,]*\s+/, :output => ['name', 'score1', 'score2', 'id']
+      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
       where 'score1:double < score2:double'
     end
     assert_equal Java::CascadingPipe::Each, assembly.tail_pipe.class
@@ -681,7 +681,7 @@ class TC_Assembly < Test::Unit::TestCase
 
   def test_where_with_expression
     assembly = mock_assembly do
-      split 'line', ['name', 'score1', 'score2', 'id'], :pattern => /[.,]*\s+/, :output => ['name', 'score1', 'score2', 'id']
+      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
       where :expression => 'score1:double < score2:double'
     end
     assert_equal Java::CascadingPipe::Each, assembly.tail_pipe.class
@@ -690,12 +690,30 @@ class TC_Assembly < Test::Unit::TestCase
 
   def test_where_with_import
     assembly = mock_assembly do
-      split 'line', ['name', 'score1', 'score2', 'id'], :pattern => /[.,]*\s+/, :output => ['name', 'score1', 'score2', 'id']
+      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
       names = ['SMITH', 'JONES', 'BROWN']
       where "import java.util.Arrays;\nArrays.asList(new String[] { \"#{names.join('", "')}\" }).contains(name:string)"
     end
     assert_equal Java::CascadingPipe::Each, assembly.tail_pipe.class
     assert_equal Java::CascadingOperationExpression::ExpressionFilter, assembly.tail_pipe.operation.class
+  end
+
+  def test_rename
+    assembly = mock_assembly do
+      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
+      rename 'score2' => 'new_score2', 'score1' => 'new_score1', 'name' => 'new_name'
+    end
+    # Original order preserved
+    assert_equal ['new_name', 'new_score1', 'new_score2', 'id'], assembly.scope.values_fields.to_a
+  end
+
+  def test_copy
+    assembly = mock_assembly do
+      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
+      copy 'score2' => 'new_score2', 'id' => 'new_id', 'name' => 'new_name'
+    end
+    # Original order preserved in copied fields
+    assert_equal ['name', 'score1', 'score2', 'id', 'new_name', 'new_score2', 'new_id'], assembly.scope.values_fields.to_a
   end
 
   def test_smoke_test_describe

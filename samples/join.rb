@@ -10,15 +10,15 @@ cascade 'join', :mode => :local do
     source 'input3', tap('samples/data/data_join3.txt')
 
     assembly 'input1' do
-      split 'line', ['id', 'name']
+      split 'line', /\t/, ['id', 'name']
     end
 
     assembly 'input2' do
-      split 'line', ['id', 'age']
+      split 'line', /\t/, ['id', 'age']
     end
 
     assembly 'input3' do
-      split 'line', ['id', 'city']
+      split 'line', /\t/, ['id', 'city']
     end
 
     assembly 'join' do

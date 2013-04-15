@@ -10,7 +10,7 @@ cascade 'union', :mode => :local do
     source 'input', tap('samples/data/genealogy/names/dist.all.last')
 
     assembly 'input' do
-      split 'line', ['name', 'score1', 'score2', 'id']
+      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id']
 
       branch 'branch1' do
         group_by 'score1', 'name' do

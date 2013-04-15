@@ -85,12 +85,12 @@ context Cascading do
         source 'right', tap('spec/resource/join_input.txt', :scheme => text_line_scheme)
 
         assembly 'left' do
-          split 'line', ['x', 'y', 'z'], :pattern => /,/
+          split 'line', /,/, ['x', 'y', 'z']
           project 'x', 'y', 'z'
         end
 
         assembly 'right' do
-          split 'line', ['x', 'y', 'z'], :pattern => /,/
+          split 'line', /,/, ['x', 'y', 'z']
           project 'x', 'y', 'z'
 
           branch 'branch_join' do

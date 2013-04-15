@@ -63,13 +63,13 @@ def test_join_assembly(params = {}, &block)
 
     assembly 'left' do
       check_scope :values_fields => ['offset', 'line']
-      split 'line', ['x', 'y', 'z'], :pattern => /,/
+      split 'line', /,/, ['x', 'y', 'z']
       check_scope :values_fields => ['offset', 'line', 'x', 'y', 'z']
     end
 
     assembly 'right' do
       check_scope :values_fields => ['offset', 'line']
-      split 'line', ['x', 'y', 'z'], :pattern => /,/
+      split 'line', /,/, ['x', 'y', 'z']
       check_scope :values_fields => ['offset', 'line', 'x', 'y', 'z']
     end
 

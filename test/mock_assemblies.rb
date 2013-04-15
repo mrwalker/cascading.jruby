@@ -39,11 +39,11 @@ module MockAssemblies
       source 'test2', tap('test/data/data2.txt')
 
       assembly 'test1' do
-        split 'line', :pattern => /[.,]*\s+/, :into => ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
+        split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
       end
 
       assembly 'test2' do
-        split 'line', :pattern => /[.,]*\s+/, :into => ['name',  'id', 'town'], :output => ['name',  'id', 'town']
+        split 'line', /[.,]*\s+/, ['name',  'id', 'town'], :output => ['name',  'id', 'town']
       end
 
       assembly = assembly 'test', &block

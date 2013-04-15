@@ -8,7 +8,7 @@ cascade 'splitter', :mode => :local do
     source 'input', tap('samples/data/data2.txt')
 
     assembly 'input' do
-      split 'line', ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
+      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
       group_by 'score1' do
         count
       end

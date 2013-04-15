@@ -36,7 +36,7 @@ class TC_LocalExecution < Test::Unit::TestCase
       source 'copy', tap('test/data/data1.txt')
 
       assembly 'copy' do
-        split 'line', :pattern => /[.,]*\s+/, :into=>['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
+        split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
         assert_size_equals 4
         assert_not_null
         debug :print_fields => true
@@ -70,14 +70,14 @@ class TC_LocalExecution < Test::Unit::TestCase
         source 'data2', tap('test/data/data2.txt')
 
         assembly1 = assembly 'data1' do
-          split 'line', :pattern => /[.,]*\s+/, :into => ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
+          split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
           assert_size_equals 4
           assert_not_null
           debug :print_fields => true
         end
 
         assembly2 = assembly 'data2' do
-          split 'line', :pattern => /[.,]*\s+/, :into => ['name',  'id', 'town'], :output => ['name',  'id', 'town']
+          split 'line', /[.,]*\s+/, ['name', 'id', 'town'], :output => ['name', 'id', 'town']
           assert_size_equals 3
           assert_not_null
           debug :print_fields => true
@@ -106,12 +106,12 @@ class TC_LocalExecution < Test::Unit::TestCase
       source 'data2', tap('test/data/data2.txt')
 
       assembly 'data1' do
-        split 'line', :pattern => /[.,]*\s+/, :into => ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
+        split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
         debug :print_fields => true
       end
 
       assembly 'data2' do
-        split 'line', :pattern => /[.,]*\s+/, :into => ['name',  'code', 'town'], :output => ['name',  'code', 'town']
+        split 'line', /[.,]*\s+/, ['name', 'code', 'town'], :output => ['name', 'code', 'town']
         debug :print_fields => true
       end
 
@@ -135,7 +135,7 @@ class TC_LocalExecution < Test::Unit::TestCase
         source 'data2', tap('test/data/data2.txt')
 
         assembly 'data1' do
-          split 'line', :pattern => /[.,]*\s+/, :into => ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
+          split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
           assert_size_equals 4
           assert_not_null
 
@@ -144,7 +144,7 @@ class TC_LocalExecution < Test::Unit::TestCase
         end
 
         assembly 'data2' do
-          split 'line', :pattern => /[.,]*\s+/, :into => ['name',  'code', 'town'], :output => ['name',  'code', 'town']
+          split 'line', /[.,]*\s+/, ['name', 'code', 'town'], :output => ['name', 'code', 'town']
           assert_size_equals 3
           assert_not_null
 

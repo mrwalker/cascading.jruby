@@ -1,10 +1,30 @@
 require 'cascading/base'
 require 'cascading/operations'
+require 'cascading/identity_operations'
+require 'cascading/regex_operations'
 require 'cascading/aggregations'
 require 'cascading/sub_assembly'
 require 'cascading/ext/array'
 
 module Cascading
+  # An Assembly is a sequence of Cascading pipes (Each, GroupBy, CoGroup,
+  # Every, and SubAssembly).  This class will serve as your primary mechanism
+  # for doing work within a flow and contains all the functions and filters you
+  # will apply to a pipe (Eaches), as well as group_by, union, and join.  For
+  # aggregators and buffers, please see Aggregations.
+  #
+  # Function and filter DSL rules:
+  # * Use positional arguments for required parameters
+  # * Use params = {} for optional parameters
+  # * Use *args sparingly, specifically when you need to accept a varying length list of fields
+  # * If you require both a varying length list of fields and optional parameters, then see the Array#extract_options! extension
+  # * If you choose to name a required parameter, add it to params = {} and throw an exception if the caller does not provide it
+  # * If you have a require parameter that is provided by one of a set of params names, throw an exception if the caller does not provide at least one value (see :function and :filter in Assembly#each for an example)
+  #
+  # Function and filter DSL standard optional parameter names:
+  # [input] c.p.Each argument selector
+  # [into] c.o.Operation field declaration
+  # [output] c.p.Each output selector
   class Assembly < Cascading::Node
     include Operations
 
@@ -105,12 +125,10 @@ module Cascading
       "#{name} : head pipe : #{head_pipe} - tail pipe: #{tail_pipe}"
     end
 
-    def prepare_join(*args, &block)
-      options = args.extract_options!
+    def prepare_join(assembly_names, params, &block)
+      pipes, _ = populate_incoming_scopes(assembly_names)
 
-      pipes, _ = populate_incoming_scopes(args)
-
-      group_fields_args = options[:on]
+      group_fields_args = params[:on]
       raise 'join requires :on parameter' unless group_fields_args
 
       if group_fields_args.kind_of?(String)
@@ -131,9 +149,9 @@ module Cascading
       raise 'join requires non-empty :on parameter' if group_fields_args.empty?
       group_fields = group_fields.to_java(Java::CascadingTuple::Fields)
       incoming_fields = @incoming_scopes.map{ |s| s.values_fields }
-      declared_fields = fields(options[:declared_fields] || dedup_fields(*incoming_fields))
-      joiner = options[:joiner]
-      is_hash_join = options[:hash] || false
+      declared_fields = fields(params[:declared_fields] || dedup_fields(*incoming_fields))
+      joiner = params[:joiner]
+      is_hash_join = params[:hash] || false
 
       case joiner
       when :inner, 'inner', nil
@@ -182,49 +200,47 @@ module Cascading
     # Builds a HashJoin pipe. This should be used carefully, as the right side
     # of the join is accumulated entirely in memory. Requires a list of assembly
     # names to join and :on to specify the join_fields.
-    def hash_join(*args, &block)
-      options = args.extract_options!
-      options[:hash] = true
-      args << options
-      prepare_join(*args, &block)
+    def hash_join(*args_with_params, &block)
+      params, assembly_names = args_with_params.extract_options!, args_with_params
+      params[:hash] = true
+      prepare_join(assembly_names, params, &block)
     end
 
     # Builds a join (CoGroup) pipe. Requires a list of assembly names to join
     # and :on to specify the group_fields.
-    def join(*args, &block)
-      options = args.extract_options!
-      options[:hash] = false
-      args << options
-      prepare_join(*args, &block)
+    def join(*args_with_params, &block)
+      params, assembly_names = args_with_params.extract_options!, args_with_params
+      params[:hash] = false
+      prepare_join(assembly_names, params, &block)
     end
     alias co_group join
 
-    def inner_join(*args, &block)
-      options = args.extract_options!
-      options[:joiner] = :inner
-      args << options
-      join(*args, &block)
+    def inner_join(*args_with_params, &block)
+      params = args_with_params.extract_options!
+      params[:joiner] = :inner
+      args_with_params << params
+      join(*args_with_params, &block)
     end
 
-    def left_join(*args, &block)
-      options = args.extract_options!
-      options[:joiner] = :left
-      args << options
-      join(*args, &block)
+    def left_join(*args_with_params, &block)
+      params = args_with_params.extract_options!
+      params[:joiner] = :left
+      args_with_params << params
+      join(*args_with_params, &block)
     end
 
-    def right_join(*args, &block)
-      options = args.extract_options!
-      options[:joiner] = :right
-      args << options
-      join(*args, &block)
+    def right_join(*args_with_params, &block)
+      params = args_with_params.extract_options!
+      params[:joiner] = :right
+      args_with_params << params
+      join(*args_with_params, &block)
     end
 
-    def outer_join(*args, &block)
-      options = args.extract_options!
-      options[:joiner] = :outer
-      args << options
-      join(*args, &block)
+    def outer_join(*args_with_params, &block)
+      params = args_with_params.extract_options!
+      params[:joiner] = :outer
+      args_with_params << params
+      join(*args_with_params, &block)
     end
 
     # Builds a new branch.
@@ -236,13 +252,13 @@ module Cascading
       assembly
     end
 
-    # Builds a new GroupBy pipe that groups on the fields given in args.
-    # Any block passed to this method should contain only Everies.
-    def group_by(*args, &block)
-      options = args.extract_options!
-      group_fields = fields(args)
-      sort_fields = fields(options[:sort_by])
-      reverse = options[:reverse]
+    # Builds a new GroupBy pipe that groups on the fields given in
+    # args_with_params. Any block passed to this method should contain only
+    # Everies.
+    def group_by(*args_with_params, &block)
+      params, group_fields = args_with_params.extract_options!, fields(args_with_params)
+      sort_fields = fields(params[:sort_by])
+      reverse = params[:reverse]
 
       parameters = [tail_pipe, group_fields, sort_fields, reverse].compact
       apply_aggregations(Java::CascadingPipe::GroupBy.new(*parameters), [scope], &block)
@@ -254,13 +270,13 @@ module Cascading
     # aggregations.
     #
     # By default, groups only on the first field (see line 189 of GroupBy.java)
-    def union(*args, &block)
-      options = args.extract_options!
-      group_fields = fields(options[:on])
-      sort_fields = fields(options[:sort_by])
-      reverse = options[:reverse]
+    def union(*args_with_params, &block)
+      params, assembly_names = args_with_params.extract_options!, args_with_params
+      group_fields = fields(params[:on])
+      sort_fields = fields(params[:sort_by])
+      reverse = params[:reverse]
 
-      pipes, _ = populate_incoming_scopes(args)
+      pipes, _ = populate_incoming_scopes(assembly_names)
 
       # Must provide group_fields to ensure field name propagation
       group_fields = fields(@incoming_scopes.first.values_fields.get(0)) unless group_fields
@@ -287,85 +303,44 @@ module Cascading
       sub_assembly
     end
 
-    # Builds a basic _each_ pipe, and adds it to the current assembly.
-    # --
-    # Example:
-    #     each 'line', :function => regex_splitter(['name', 'val1', 'val2', 'id'], :pattern => /[.,]*\s+/), :output => ['id', 'name', 'val1', 'val2']
-    def each(*args)
-      options = args.extract_options!
-
-      in_fields = fields(args)
-      out_fields = fields(options[:output])
-
-      operation = options[:filter] || options[:function]
-      raise 'c.p.Each does not support applying an output selector to a c.o.Filter' if options[:filter] && options[:output]
+    # Builds a basic each pipe, and adds it to the current assembly.
+    #
+    # Default arguments are all_fields, a default inherited from c.o.Each.
+    def each(*args_with_params)
+      params, in_fields = args_with_params.extract_options!, fields(args_with_params)
+      out_fields = fields(params[:output]) # Default Fields.RESULTS from c.o.Each
+      operation = params[:filter] || params[:function]
+      raise 'each requires either :filter or :function' unless operation
+      raise 'c.p.Each does not support applying an output selector to a c.o.Filter' if params[:filter] && params[:output]
 
       parameters = [tail_pipe, in_fields, operation, out_fields].compact
       each = make_pipe(Java::CascadingPipe::Each, parameters)
-      raise ':function specified but c.o.Filter provided' if options[:function] && each.is_filter
-      raise ':filter specified but c.o.Function provided' if options[:filter] && each.is_function
+      raise ':function specified but c.o.Filter provided' if params[:function] && each.is_filter
+      raise ':filter specified but c.o.Function provided' if params[:filter] && each.is_function
 
       each
     end
 
-    # Restricts the current assembly to the specified fields.
-    # --
-    # Example:
-    #     project "field1", "field2"
-    def project(*args)
-      each fields(args), :function => Java::CascadingOperation::Identity.new
-    end
+    include IdentityOperations
+    include RegexOperations
 
-    # Removes the specified fields from the current assembly.
-    # --
-    # Example:
-    #     discard "field1", "field2"
-    def discard(*args)
-      discard_fields = fields(args)
-      keep_fields = difference_fields(scope.values_fields, discard_fields)
-      project(*keep_fields.to_a)
-    end
-
-    # Renames fields according to the mapping provided.
-    # --
-    # Example:
-    #     rename "old_name" => "new_name"
-    def rename(name_map)
-      old_names = scope.values_fields.to_a
-      new_names = old_names.map{ |name| name_map[name] || name }
-      invalid = name_map.keys.sort - old_names
-      raise "invalid names: #{invalid.inspect}" unless invalid.empty?
-
-      each all_fields, :function => Java::CascadingOperation::Identity.new(fields(new_names))
-    end
-
-    def cast(type_map)
-      names = type_map.keys.sort
-      types = JAVA_TYPE_MAP.values_at(*type_map.values_at(*names))
-      fields = fields(names)
-      types = types.to_java(java.lang.Class)
-      each fields, :function => Java::CascadingOperation::Identity.new(fields, types)
-    end
-
-    def copy(*args)
-      options = args.extract_options!
-      from = args[0] || all_fields
-      into = args[1] || options[:into] || all_fields
-      each fields(from), :function => Java::CascadingOperation::Identity.new(fields(into)), :output => all_fields
-    end
-
-    # A pipe that does nothing.
-    def pass(*args)
-      each all_fields, :function => Java::CascadingOperation::Identity.new
-    end
-
-    def assert(*args)
-      options = args.extract_options!
-      assertion = args[0]
-      assertion_level = options[:level] || Java::CascadingOperation::AssertionLevel::STRICT
+    def assert(assertion, params = {})
+      assertion_level = params[:level] || Java::CascadingOperation::AssertionLevel::STRICT
 
       parameters = [tail_pipe, assertion_level, assertion]
       make_pipe(Java::CascadingPipe::Each, parameters)
+    end
+
+    # Builds a pipe that assert the size of the tuple is the size specified in parameter.
+    def assert_size_equals(size, params = {})
+      assertion = Java::CascadingOperationAssertion::AssertSizeEquals.new(size)
+      assert(assertion, params)
+    end
+
+    # Builds a pipe that assert the none of the fields in the tuple are null.
+    def assert_not_null(params = {})
+      assertion = Java::CascadingOperationAssertion::AssertNotNull.new
+      assert(assertion, params)
     end
 
     # Builds a debugging pipe.
@@ -376,95 +351,12 @@ module Cascading
     # The other named options are:
     # * <tt>:print_fields</tt> a boolean. If is set to true, then it prints every 10 tuples.
     #
-    def debug(*args)
-      options = args.extract_options!
-      print_fields = options[:print_fields] || true
-      parameters = [print_fields].compact
-      debug = Java::CascadingOperation::Debug.new(*parameters)
-      debug.print_tuple_every = options[:tuple_interval] || 1
-      debug.print_fields_every = options[:fields_interval] || 10
+    def debug(params = {})
+      print_fields = params[:print_fields] || true
+      debug = Java::CascadingOperation::Debug.new(print_fields)
+      debug.print_tuple_every = params[:tuple_interval] || 1
+      debug.print_fields_every = params[:fields_interval] || 10
       each(all_fields, :filter => debug)
-    end
-
-    # Builds a pipe that assert the size of the tuple is the size specified in parameter.
-    #
-    # The method accept an unique uname argument : a number indicating the size expected.
-    def assert_size_equals(*args)
-      options = args.extract_options!
-      assertion = Java::CascadingOperationAssertion::AssertSizeEquals.new(args[0])
-      assert(assertion, options)
-    end
-
-    # Builds a pipe that assert the none of the fields in the tuple are null.
-    def assert_not_null(*args)
-      options = args.extract_options!
-      assertion = Java::CascadingOperationAssertion::AssertNotNull.new
-      assert(assertion, options)
-    end
-
-    # Builds a _parse_ pipe. This pipe will parse the fields specified in input (first unamed arguments),
-    # using a specified regex pattern.
-    #
-    # If provided, the unamed arguments must be the fields to be parsed. If not provided, then all incoming
-    # fields are used.
-    #
-    # The named options are:
-    # * <tt>:pattern</tt> a string or regex. Specifies the regular expression used for parsing the argument fields.
-    # * <tt>:output</tt> a string or array of strings. Specifies the outgoing fields (all fields will be output by default)
-    def parse(*args)
-        options = args.extract_options!
-        fields = args || all_fields
-        pattern = options[:pattern]
-        output = options[:output] || all_fields
-        each(fields, :function => regex_parser(pattern, options), :output => output)
-    end
-
-    # Builds a pipe that splits a field into other fields, using a specified regular expression.
-    #
-    # The first unnamed argument is the field to be split.
-    # The second unnamed argument is an array of strings indicating the fields receiving the result of the split.
-    #
-    # The named options are:
-    # * <tt>:pattern</tt> a string or regex. Specifies the regular expression used for splitting the argument fields.
-    # * <tt>:output</tt> a string or array of strings. Specifies the outgoing fields (all fields will be output by default)
-    def split(*args)
-      options = args.extract_options!
-      fields = options[:into] || args[1]
-      pattern = options[:pattern] || /[.,]*\s+/
-      output = options[:output] || all_fields
-      each(args[0], :function => regex_splitter(fields, :pattern => pattern), :output=>output)
-    end
-
-    # Builds a pipe that splits a field into new rows, using a specified regular expression.
-    #
-    # The first unnamed argument is the field to be split.
-    # The second unnamed argument is the field receiving the result of the split.
-    #
-    # The named options are:
-    # * <tt>:pattern</tt> a string or regex. Specifies the regular expression used for splitting the argument fields.
-    # * <tt>:output</tt> a string or array of strings. Specifies the outgoing fields (all fields will be output by default)
-    def split_rows(*args)
-      options = args.extract_options!
-      fields = options[:into] || args[1]
-      pattern = options[:pattern] || /[.,]*\s+/
-      output = options[:output] || all_fields
-      each(args[0], :function => regex_split_generator(fields, :pattern => pattern), :output=>output)
-    end
-
-    # Builds a pipe that emits a new row for each regex group matched in a field, using a specified regular expression.
-    #
-    # The first unnamed argument is the field to be matched against.
-    # The second unnamed argument is the field receiving the result of the match.
-    #
-    # The named options are:
-    # * <tt>:pattern</tt> a string or regex. Specifies the regular expression used for matching the argument fields.
-    # * <tt>:output</tt> a string or array of strings. Specifies the outgoing fields (all fields will be output by default)
-    def match_rows(*args)
-      options = args.extract_options!
-      fields = options[:into] || args[1]
-      pattern = options[:pattern] || /[\w]+/
-      output = options[:output] || all_fields
-      each(args[0], :function => regex_generator(fields, :pattern => pattern), :output=>output)
     end
 
     # Builds a pipe that parses the specified field as a date using hte provided format string.
@@ -501,26 +393,6 @@ module Cascading
       output = options[:output] || all_fields
 
       each args[0], :function => date_formatter(field, pattern, options[:timezone]), :output => output
-    end
-
-    # Builds a pipe that perform a query/replace based on a regular expression.
-    #
-    # The first unamed argument specifies the input field.
-    #
-    # The named options are:
-    # * <tt>:pattern</tt> a string or regex. Specifies the pattern to look for in the input field. This non-optional argument
-    # can also be specified as a second _unamed_ argument.
-    # * <tt>:replacement</tt> a string. Specifies the replacement.
-    # * <tt>:output</tt> a string or array of strings. Specifies the outgoing fields (all fields will be output by default)
-    def replace(*args)
-      options = args.extract_options!
-
-      pattern = options[:pattern] || args[1]
-      replacement = options[:replacement] || args[2]
-      into = options[:into] || "#{args[0]}_replaced"
-      output = options[:output] || all_fields
-
-      each args[0], :function => regex_replace(into, pattern, replacement), :output => output
     end
 
     # Builds a pipe that inserts values into the current tuple.

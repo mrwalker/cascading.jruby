@@ -5,8 +5,7 @@ require 'cascading/ext/array'
 module Cascading
   # Rules enforced by Aggregations:
   # * Contains either 1 Buffer or >= 1 Aggregator (explicitly checked)
-  # * No GroupBys, CoGroups, Joins, or Merges (methods for these pipes do not
-  # exist on Aggregations)
+  # * No GroupBys, CoGroups, Joins, or Merges (methods for these pipes do not exist on Aggregations)
   # * No Eaches (Aggregations#each does not exist)
   # * Aggregations may not branch (Aggregations#branch does not exist)
   #
@@ -15,9 +14,7 @@ module Cascading
   # * Must follow a GroupBy or CoGroup (not a Join or Merge)
   #
   # Optimizations:
-  # * If the leading Group is a GroupBy and all subsequent Everies are
-  # Aggregators that have a corresponding AggregateBy, Aggregations can replace
-  # the GroupBy/Aggregator pipe with a single composite AggregateBy
+  # * If the leading Group is a GroupBy and all subsequent Everies are Aggregators that have a corresponding AggregateBy, Aggregations can replace the GroupBy/Aggregator pipe with a single composite AggregateBy
   class Aggregations
     include Operations
 

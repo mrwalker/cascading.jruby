@@ -10,7 +10,7 @@ cascade 'project', :mode => :local do
     source 'input', tap('samples/data/data2.txt')
 
     assembly 'input' do
-      split 'line', ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
+      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
       assert Java::CascadingOperationAssertion::AssertSizeEquals.new(4)
       project 'name', 'score1', 'score2'
       assert Java::CascadingOperationAssertion::AssertSizeEquals.new(3)

@@ -8,7 +8,7 @@ c = cascade 'group_by', :mode => :local do
     source 'input', tap('samples/data/data_group_by.tsv')
 
     assembly 'input' do
-      split 'line', ['id', 'city'], :output => ['id', 'city']
+      split 'line', /\t/, ['id', 'city'], :output => ['id', 'city']
 
       branch 'group_by' do
         group_by 'city', :sort_by => 'city' do

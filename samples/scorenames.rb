@@ -10,7 +10,7 @@ cascade 'scorenames', :mode => :local do
     source 'input', tap('samples/data/genealogy/names/dist.all.last')
 
     assembly 'input' do
-      split 'line', ['name', 'val1', 'val2', 'id']
+      split 'line', /[.,]*\s+/, ['name', 'val1', 'val2', 'id']
       insert 'val3' => expr('val2:double < 40.0 ? val1:double : val2:double')
       project 'name', 'val3', 'id'
     end

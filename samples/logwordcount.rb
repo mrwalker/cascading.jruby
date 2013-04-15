@@ -10,7 +10,7 @@ cascade 'logwordcount', :mode => :local do
     source 'input', tap('samples/data/gutenberg/the_outline_of_science_vol_1')
 
     assembly 'input' do
-      split_rows 'line', 'word', :pattern => /[.,]*\s+/, :output => 'word'
+      split_rows 'line', /[.,]*\s+/, 'word', :output => 'word'
       group_by 'word' do
         count
       end

@@ -11,7 +11,7 @@ flow 'ungroup', :mode => :local do
   source 'input', tap('samples/data/ungroup.tsv')
 
   a = assembly 'input' do
-    split 'line', ['key', 'val1', 'val2', 'val3'], :output => ['key', 'val1', 'val2', 'val3']
+    split 'line', /\t/, ['key', 'val1', 'val2', 'val3'], :output => ['key', 'val1', 'val2', 'val3']
 
     branch 'ungroup_using_value_selectors' do
       #each all_fields, :function => Java::CascadingOperationFunction::UnGroup.new(fields(['new_key', 'val']), fields('key'), [fields('val1'), fields('val2'), fields('val3')].to_java(Java::CascadingTuple::Fields)), :output => ['new_key', 'val']
