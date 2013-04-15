@@ -32,4 +32,4 @@ For operations you can apply to your dataflow within a pipe assembly, see the [A
 
 Note that the Ruby code you write merely constructs a Cascading job, so no JRuby runtime is required on your cluster.  This stands in contrast with writing [Hadoop streaming jobs in Ruby](http://www.quora.com/How-do-the-different-options-for-Ruby-on-Hadoop-compare).  To run cascading.jruby applications on a Hadoop cluster, you must use [Jading](https://github.com/etsy/jading) to package them into a job jar.
 
-cascading.jruby has been tested on JRuby versions 1.2.0, 1.4.0, 1.5.3, 1.6.5, and 1.6.7.2.
+cascading.jruby has been tested on JRuby versions 1.2.0, 1.4.0, 1.5.3, 1.6.5, 1.6.7.2, 1.7.0, and 1.7.3.
