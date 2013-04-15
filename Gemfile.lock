@@ -1,12 +1,12 @@
 GEM
-  remote: http://rubygems.org/
+  remote: https://rubygems.org/
   specs:
-    rake (0.8.7)
+    rake (10.0.3)
     rspec (1.1.11)
 
 PLATFORMS
   java
 
 DEPENDENCIES
-  rake (= 0.8.7)
+  rake (= 10.0.3)
   rspec (= 1.1.11)

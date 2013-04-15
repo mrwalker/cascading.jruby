@@ -2,5 +2,4 @@ language: ruby
 rvm:
   - jruby-18mode
 notifications:
-  recipients:
-    - mwalker@etsy.com
+  irc: "irc.freenode.org#etsydoop"
