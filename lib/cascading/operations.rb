@@ -1,40 +1,5 @@
 module Cascading
-  # The Cascading::Operations module is deprecated.  The original idea from long
-  # ago is that it would be useful to mixin operator wrappers to places other
-  # than Cascading::Assembly, but this is not true.  Instead, put Eaches in
-  # Cascading::Assembly, Everies in Cascading::Aggregations, and any more
-  # generally useful utility code directly in the Cascading module
-  # (cascading/cascading.rb).
-  #
-  # Further, the entire *args pattern should be deprecated as it leads to
-  # functions that can only be understood by reading their code.  Instead,
-  # idiomatic Ruby (positional required params and a params hash for optional
-  # args) should be used.  See Cascading::Assembly#set_value for an example.
   module Operations
-    def aggregator_function(args, aggregator_klass)
-      options = args.extract_options!
-      ignore = options[:ignore]
-
-      parameters = [Cascading.fields(args), ignore].compact
-      aggregator_klass.new(*parameters)
-    end
-
-    def first_function(*args)
-      aggregator_function(args, Java::CascadingOperationAggregator::First)
-    end
-
-    def min_function(*args)
-      aggregator_function(args, Java::CascadingOperationAggregator::Min)
-    end
-
-    def max_function(*args)
-      aggregator_function(args, Java::CascadingOperationAggregator::Max)
-    end
-
-    def last_function(*args)
-      aggregator_function(args, Java::CascadingOperationAggregator::Last)
-    end
-
     def expression_function(*args)
       options = args.extract_options!
 

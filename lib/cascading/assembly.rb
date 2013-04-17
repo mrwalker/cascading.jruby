@@ -28,8 +28,6 @@ module Cascading
   # [into] c.o.Operation field declaration
   # [output] c.p.Each output selector
   class Assembly < Cascading::Node
-    include Operations
-
     attr_reader :head_pipe, :tail_pipe
 
     def initialize(name, parent, outgoing_scopes = {})
@@ -323,6 +321,7 @@ module Cascading
       each
     end
 
+    include Operations
     include IdentityOperations
     include FilterOperations
     include RegexOperations

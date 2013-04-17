@@ -1,4 +1,4 @@
-require 'cascading/operations'
+require 'cascading/aggregator_operations'
 require 'cascading/scope'
 require 'cascading/ext/array'
 
@@ -16,8 +16,6 @@ module Cascading
   # Optimizations:
   # * If the leading Group is a GroupBy and all subsequent Everies are Aggregators that have a corresponding AggregateBy, Aggregations can replace the GroupBy/Aggregator pipe with a single composite AggregateBy
   class Aggregations
-    include Operations
-
     attr_reader :assembly, :tail_pipe, :scope, :aggregate_bys
 
     def initialize(assembly, group, incoming_scopes)
@@ -83,6 +81,8 @@ module Cascading
       parameters = [tail_pipe, in_fields, operation, out_fields].compact
       make_pipe(Java::CascadingPipe::Every, parameters)
     end
+
+    include AggregatorOperations
 
     def assert_group(*args)
       options = args.extract_options!

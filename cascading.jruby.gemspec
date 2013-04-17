@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.rubyforge_project = "cascading.jruby"
   s.rubygems_version = "1.8.21"
   s.summary = "A JRuby DSL for Cascading"
-  s.test_files = ["test/test_aggregations.rb", "test/test_assembly.rb", "test/test_cascade.rb", "test/test_cascading.rb", "test/test_exceptions.rb", "test/test_flow.rb", "test/test_local_execution.rb", "test/test_operations.rb"]
+  s.test_files = Dir.glob("test/**/*.rb")
 
   if s.respond_to? :specification_version then
     s.specification_version = 3
