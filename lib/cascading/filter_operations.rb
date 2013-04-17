@@ -24,6 +24,10 @@ module Cascading
     # [match_each_element] Boolean indicating if regex should match entire
     #                      incoming tuple (joined with tabs) or each field
     #                      individually.  Defaults to false.
+    #
+    # Example:
+    #     filter :input => 'field1', :regex => /\t/, :remove_match => true
+    #     filter :expression => 'field1:long > 0 && "".equals(field2:string)', :remove_match => true
     def filter(params = {})
       input_fields = params[:input] || all_fields
       expression = params[:expression]
@@ -51,6 +55,9 @@ module Cascading
 
     # Rejects tuples from the current assembly based on a Janino expression.
     # This is just a wrapper for FilterOperations.filter.
+    #
+    # Example:
+    #     reject 'field1:long > 0 && "".equals(field2:string)'
     def reject(expression, params = {})
       params[:expression] = expression
       filter(params)
@@ -63,6 +70,9 @@ module Cascading
     # attempt is made to support import statements prior to the expression.  If
     # this support should break, simply negate your expression and use
     # FilterOperations.reject.
+    #
+    # Example:
+    #     where 'field1:long > 0 && "".equals(field2:string)'
     def where(expression, params = {})
       _, imports, expr = expression.match(/^((?:\s*import.*;\s*)*)(.*)$/).to_a
       params[:expression] = "#{imports}!(#{expr})"
@@ -70,12 +80,18 @@ module Cascading
     end
 
     # Rejects tuples from the current assembly if any input field is null.
+    #
+    # Example:
+    #     filter_null 'field1', 'field2'
     def filter_null(*input_fields)
       each(input_fields, :filter => Java::CascadingOperationFilter::FilterNull.new)
     end
     alias reject_null filter_null
 
     # Rejects tuples from the current assembly if any input field is not null.
+    #
+    # Example:
+    #     filter_not_null 'field1', 'field2'
     def filter_not_null(*input_fields)
       each(input_fields, :filter => Java::CascadingOperationFilter::FilterNotNull.new)
     end
