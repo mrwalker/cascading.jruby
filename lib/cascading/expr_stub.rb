@@ -21,6 +21,12 @@ module Cascading
       end
     end
 
+    # Extract Java names and types from @types hash
+    def names_and_types
+      names, types = split_hash(@types)
+      [names.to_java(java.lang.String), types.to_java(java.lang.Class)]
+    end
+
     def to_s
       @input_expression
     end
@@ -111,12 +117,6 @@ module Cascading
       rescue NativeException => ne
         raise CascadingException.new(ne, "Exception encountered while compiling '#{@expression}'")
       end
-    end
-
-    # Extract Java names and types from @types hash
-    def names_and_types
-      names, types = split_hash(@types)
-      [names.to_java(java.lang.String), types.to_java(java.lang.Class)]
     end
 
     # Makes best effort to convert Ruby numbers into the Java numeric type

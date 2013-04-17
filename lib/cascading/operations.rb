@@ -88,39 +88,5 @@ module Cascading
           java.lang.String.new(v.to_s)
       end
     end
-
-    def expression_filter(*args)
-      options = args.extract_options!
-      expression = (args[0] || options[:expression]).to_s
-      parameters = options[:parameters]
-      parameter_names = []
-      parameter_types = []
-      if parameters.is_a? ::Hash
-        parameters.each do |name, type|
-          parameter_names << name
-          parameter_types << type
-        end
-        parameter_names = parameter_names.to_java(java.lang.String)
-        parameter_types = parameter_types.to_java(java.lang.Class)
-
-        arguments = [expression, parameter_names, parameter_types].compact
-      elsif !parameters.nil?
-        arguments = [expression, parameters.java_class].compact
-      else
-        arguments = [expression, java.lang.String.java_class].compact
-      end
-
-      Java::CascadingOperationExpression::ExpressionFilter.new(*arguments)
-    end
-
-    def regex_filter(*args)
-      options = args.extract_options!
-
-      pattern = args[0]
-      remove_match = options[:remove_match]
-      match_each_element = options[:match_each_element]
-      parameters = [pattern.to_s, remove_match, match_each_element].compact
-      Java::CascadingOperationRegex::RegexFilter.new(*parameters)
-    end
   end
 end

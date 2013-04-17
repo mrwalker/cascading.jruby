@@ -659,30 +659,10 @@ class TC_Assembly < Test::Unit::TestCase
     assert_equal ['line', 'sum'], assembly.scope.grouping_fields.to_a
   end
 
-  def test_empty_where
-    assembly = mock_assembly do
-      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
-      where
-    end
-    assert_equal Java::CascadingPipe::Each, assembly.tail_pipe.class
-
-    # Empty where compiles away
-    assert_equal Java::CascadingOperationRegex::RegexSplitter, assembly.tail_pipe.operation.class
-  end
-
   def test_where
     assembly = mock_assembly do
       split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
       where 'score1:double < score2:double'
-    end
-    assert_equal Java::CascadingPipe::Each, assembly.tail_pipe.class
-    assert_equal Java::CascadingOperationExpression::ExpressionFilter, assembly.tail_pipe.operation.class
-  end
-
-  def test_where_with_expression
-    assembly = mock_assembly do
-      split 'line', /[.,]*\s+/, ['name', 'score1', 'score2', 'id'], :output => ['name', 'score1', 'score2', 'id']
-      where :expression => 'score1:double < score2:double'
     end
     assert_equal Java::CascadingPipe::Each, assembly.tail_pipe.class
     assert_equal Java::CascadingOperationExpression::ExpressionFilter, assembly.tail_pipe.operation.class
