@@ -16,6 +16,7 @@ require 'cascading/mode'
 require 'cascading/operations'
 require 'cascading/identity_operations'
 require 'cascading/regex_operations'
+require 'cascading/text_operations'
 require 'cascading/scope'
 require 'cascading/tap'
 

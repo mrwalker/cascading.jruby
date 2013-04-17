@@ -2,6 +2,7 @@ require 'cascading/base'
 require 'cascading/operations'
 require 'cascading/identity_operations'
 require 'cascading/regex_operations'
+require 'cascading/text_operations'
 require 'cascading/aggregations'
 require 'cascading/sub_assembly'
 require 'cascading/ext/array'
@@ -323,6 +324,7 @@ module Cascading
 
     include IdentityOperations
     include RegexOperations
+    include TextOperations
 
     def assert(assertion, params = {})
       assertion_level = params[:level] || Java::CascadingOperation::AssertionLevel::STRICT
@@ -357,42 +359,6 @@ module Cascading
       debug.print_tuple_every = params[:tuple_interval] || 1
       debug.print_fields_every = params[:fields_interval] || 10
       each(all_fields, :filter => debug)
-    end
-
-    # Builds a pipe that parses the specified field as a date using hte provided format string.
-    # The unamed argument specifies the field to format.
-    #
-    # The named options are:
-    # * <tt>:into</tt> a string. It specifies the receiving field. By default, it will be named after
-    # the input argument.
-    # * <tt>:pattern</tt> a string. Specifies the date format.
-    # * <tt>:output</tt> a string or array of strings. Specifies the outgoing fields (all fields will be output by default)
-    def parse_date(*args)
-      options = args.extract_options!
-      field = options[:into] || "#{args[0]}_parsed"
-      output = options[:output] || all_fields
-      pattern = options[:pattern] || "yyyy/MM/dd"
-
-      each args[0], :function => date_parser(field, pattern), :output => output
-    end
-
-    # Builds a pipe that format a date using a specified format pattern.
-    #
-    # The unamed argument specifies the field to format.
-    #
-    # The named options are:
-    # * <tt>:into</tt> a string. It specifies the receiving field. By default, it will be named after
-    # the input argument.
-    # * <tt>:pattern</tt> a string. Specifies the date format.
-    # * <tt>:timezone</tt> a string.  Specifies the timezone (defaults to UTC).
-    # * <tt>:output</tt> a string or array of strings. Specifies the outgoing fields (all fields will be output by default)
-    def format_date(*args)
-      options = args.extract_options!
-      field = options[:into] || "#{args[0]}_formatted"
-      pattern = options[:pattern] || "yyyy/MM/dd"
-      output = options[:output] || all_fields
-
-      each args[0], :function => date_formatter(field, pattern, options[:timezone]), :output => output
     end
 
     # Builds a pipe that inserts values into the current tuple.
@@ -541,13 +507,6 @@ module Cascading
       fields = args[0] || all_fields
       group_by *fields
       pass
-    end
-
-    def join_fields(*args)
-      options = args.extract_options!
-      output = options[:output] || all_fields
-
-      each args, :function => field_joiner(options), :output => output
     end
 
     # Ungroups, or unpivots, a tuple (see Cascading's UnGroup at http://docs.cascading.org/cascading/2.0/javadoc/cascading/operation/function/UnGroup.html).

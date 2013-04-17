@@ -117,18 +117,6 @@ module Cascading
       Java::CascadingOperationExpression::ExpressionFilter.new(*arguments)
     end
 
-    def date_parser(field, format)
-      fields = fields(field)
-      Java::CascadingOperationText::DateParser.new(fields, format)
-    end
-
-    def date_formatter(fields, format, timezone=nil)
-      fields = fields(fields)
-      timezone = Java::JavaUtil::TimeZone.get_time_zone(timezone) if timezone
-      arguments = [fields, format, timezone].compact
-      Java::CascadingOperationText::DateFormatter.new(*arguments)
-    end
-
     def regex_filter(*args)
       options = args.extract_options!
 
@@ -137,15 +125,6 @@ module Cascading
       match_each_element = options[:match_each_element]
       parameters = [pattern.to_s, remove_match, match_each_element].compact
       Java::CascadingOperationRegex::RegexFilter.new(*parameters)
-    end
-
-    def field_joiner(*args)
-      options = args.extract_options!
-      delimiter = options[:delimiter] || ','
-      fields = fields(options[:into])
-
-      parameters = [fields, delimiter].compact
-      Java::CascadingOperationText::FieldJoiner.new(*parameters)
     end
   end
 end
