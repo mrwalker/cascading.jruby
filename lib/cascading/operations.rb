@@ -1,19 +1,25 @@
 module Cascading
   module Operations
-    # Builds a debugging pipe.
+    # Debugs the current assembly at runtime, printing every tuple and fields
+    # every 10 tuples by default.
     #
-    # Without arguments, it generate a simple debug pipe, that prints all tuple to the standard
-    # output.
-    #
-    # The other named options are:
-    # * <tt>:print_fields</tt> a boolean. If is set to true, then it prints every 10 tuples.
-    #
+    # The named params are:
+    # [prefix] String to prefix prints with.
+    # [print_fields] Boolean controlling field printing, defaults to false.
+    # [tuple_interval] Integer specifying interval between printed tuples
+    # [fields_interval] Integer specifying interval between printing fields
     def debug(params = {})
-      print_fields = params[:print_fields] || true
-      debug = Java::CascadingOperation::Debug.new(print_fields)
+      input_fields = params[:input] || all_fields
+      prefix = params[:prefix]
+      print_fields = params[:print_fields]
+
+      parameters = [prefix, print_fields].compact
+      debug = Java::CascadingOperation::Debug.new(*parameters)
+
       debug.print_tuple_every = params[:tuple_interval] || 1
       debug.print_fields_every = params[:fields_interval] || 10
-      each(all_fields, :filter => debug)
+
+      each(input_fields, :filter => debug)
     end
 
     # Inserts new fields into the current assembly.  Values may be constants or
