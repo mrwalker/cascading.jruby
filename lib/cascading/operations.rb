@@ -44,17 +44,6 @@ module Cascading
       end
     end
 
-    # Builds a pipe that returns distinct tuples based on the provided fields.
-    #
-    # The method accepts optional unamed argument specifying the fields to base the distinct on
-    # (all fields, by default).
-    def distinct(*args)
-      raise "Distinct is badly broken"
-      fields = args[0] || all_fields
-      group_by *fields
-      pass
-    end
-
     # Ungroups, or unpivots, a tuple (see Cascading's UnGroup at http://docs.cascading.org/cascading/2.0/javadoc/cascading/operation/function/UnGroup.html).
     #
     # You must provide :key and you must provide only one of :value_selectors
