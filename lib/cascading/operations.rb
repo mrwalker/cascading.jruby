@@ -11,10 +11,6 @@ module Cascading
   # idiomatic Ruby (positional required params and a params hash for optional
   # args) should be used.  See Cascading::Assembly#set_value for an example.
   module Operations
-    def identity
-      Java::CascadingOperation::Identity.new
-    end
-
     def aggregator_function(args, aggregator_klass)
       options = args.extract_options!
       ignore = options[:ignore]

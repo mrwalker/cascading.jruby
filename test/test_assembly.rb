@@ -23,7 +23,7 @@ class TC_Assembly < Test::Unit::TestCase
 
   def test_each_identity
     assembly = mock_assembly do
-      each 'offset', :function => identity
+      each 'offset', :function => Java::CascadingOperation::Identity.new
     end
 
     flow = assembly.parent
@@ -35,7 +35,7 @@ class TC_Assembly < Test::Unit::TestCase
   def test_create_each
     # You can apply an Each to 0 fields
     assembly = mock_assembly do
-      each(:function => identity)
+      each(:function => Java::CascadingOperation::Identity.new)
     end
     assert_equal Java::CascadingPipe::Each, assembly.tail_pipe.class
 
@@ -579,7 +579,7 @@ class TC_Assembly < Test::Unit::TestCase
     assembly = mock_assembly do
       branch 'branch1' do
         branch 'branch2' do
-          each 'line', :function => identity
+          each 'line', :function => Java::CascadingOperation::Identity.new
         end
       end
     end
