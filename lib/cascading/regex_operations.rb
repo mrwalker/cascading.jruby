@@ -26,7 +26,7 @@ module Cascading
     #          a subset of groups.
     #
     # Example:
-    #     parse 'field1', /([\w]+)\s+([\w]+)/, ['out1', 'out2'], :groups => [1, 2]
+    #     parse 'field1', /(\w+)\s+(\w+)/, ['out1', 'out2'], :groups => [1, 2]
     def parse(input_field, regex, into_fields, params = {})
       groups = params[:groups].to_java(:int) if params[:groups]
       output = params[:output] || all_fields # Overrides Cascading default
@@ -84,7 +84,7 @@ module Cascading
     # specified regular expression.
     #
     # Example:
-    #     match_rows 'line', /([\w+])\s+([\w+])/, 'word'
+    #     match_rows 'line', /(\w+)\s+(\w+)/, 'word'
     def match_rows(input_field, regex, into_field, params = {})
       output = params[:output] || all_fields # Overrides Cascading default
 

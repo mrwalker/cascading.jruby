@@ -8,6 +8,9 @@ module Cascading
     # [print_fields] Boolean controlling field printing, defaults to false.
     # [tuple_interval] Integer specifying interval between printed tuples
     # [fields_interval] Integer specifying interval between printing fields
+    #
+    # Example:
+    #     debug :prefix => 'DEBUG', :print_fields => true, :fields_interval => 1000
     def debug(params = {})
       input_fields = params[:input] || all_fields
       prefix = params[:prefix]
@@ -50,60 +53,44 @@ module Cascading
       end
     end
 
-    # Ungroups, or unpivots, a tuple (see Cascading's UnGroup at http://docs.cascading.org/cascading/2.0/javadoc/cascading/operation/function/UnGroup.html).
+    # Ungroups, or unpivots, a tuple (see Cascading's {UnGroup}[http://docs.cascading.org/cascading/2.1/javadoc/cascading/operation/function/UnGroup.html]).
     #
-    # You must provide :key and you must provide only one of :value_selectors
-    # and :num_values.
+    # You must provide exactly one of :value_selectors and :num_values.
     #
-    # The named options are:
-    # * <tt>:key</tt> required array of field names to replicate on every
-    #   output row in an ungrouped group.
-    # * <tt>:value_selectors</tt> an array of field names to ungroup.  Each
-    #   field will be ungrouped into an output tuple along with the key fields
-    #   in the order provided.
-    # * <tt>:num_values</tt> an integer specifying the number of fields to
-    #   ungroup into each output tuple (excluding the key fields).  All input
-    #   fields will be ungrouped.
-    # * <tt>:input</tt> an array of field names that specifies the fields to
-    #   input to UnGroup.  Defaults to all_fields.
-    # * <tt>:into</tt> an array of field names.  Default set by UnGroup.
-    # * <tt>:output</tt> an array of field names that specifies the fields to
-    #   produce as output of UnGroup.  Defaults to all_fields.
-    def ungroup(*args)
-      options = args.extract_options!
-      input = options[:input] || all_fields
-      into = fields(options[:into])
-      output = options[:output] || all_fields
-      key = fields(options[:key])
+    # The named params are:
+    # [value_selectors] Array of field names to ungroup. Each field will be
+    #                   ungrouped into an output tuple along with the key fields
+    #                   in the order provided.
+    # [num_values] Integer specifying the number of fields to ungroup into each
+    #              output tuple (excluding the key fields).  All input fields
+    #              will be ungrouped.
+    #
+    # Example:
+    #     ungroup 'key', ['new_key', 'val], :value_selectors => ['val1', 'val2', 'val3'], :output => ['new_key', 'val']
+    def ungroup(key, into_fields, params = {})
+      input_fields = params[:input] || all_fields
+      output = params[:output] || all_fields
 
-      raise 'You must provide exactly one of :value_selectors or :num_values to ungroup' unless options.has_key?(:value_selectors) ^ options.has_key?(:num_values)
-      value_selectors = options[:value_selectors].map{ |vs| fields(vs) }.to_java(Java::CascadingTuple::Fields) if options.has_key?(:value_selectors)
-      num_values = options[:num_values] if options.has_key?(:num_values)
+      raise 'You must provide exactly one of :value_selectors or :num_values to ungroup' unless params.has_key?(:value_selectors) ^ params.has_key?(:num_values)
+      value_selectors = params[:value_selectors].map{ |vs| fields(vs) }.to_java(Java::CascadingTuple::Fields) if params.has_key?(:value_selectors)
+      num_values = params[:num_values] if params.has_key?(:num_values)
 
-      parameters = [into, key, value_selectors, num_values].compact
-      each input, :function => Java::CascadingOperationFunction::UnGroup.new(*parameters), :output => output
+      parameters = [fields(into_fields), fields(key), value_selectors, num_values].compact
+      each input_fields, :function => Java::CascadingOperationFunction::UnGroup.new(*parameters), :output => output
     end
 
     # Inserts one of two values into the dataflow based upon the result of the
-    # supplied filter on the input fields.  This is primarily useful for
-    # creating indicators from filters.
+    # supplied filter on the input_fields.  This is primarily useful for
+    # creating indicators from filters.  keep_value specifies the Java value to
+    # produce when the filter would keep the given input and remove_value
+    # specifies the Java value to produce when the filter would remove the given
+    # input.
     #
-    # Parameters:
-    # * <tt>input</tt> name of field to apply the filter.
-    # * <tt>filter</tt> Cascading Filter to apply.
-    # * <tt>keep_value</tt> Java value to produce when the filter would keep
-    #   the given input.
-    # * <tt>remove_value</tt> Java value to produce when the filter would
-    #   remove the given input.
-    #
-    # The named options are:
-    # * <tt>:into</tt> an output field name, defaulting to 'filter_value'.
-    # * <tt>:output</tt> an array of field names that specifies the fields to
-    #   retain in the output tuple.  Defaults to all_fields.
-    def set_value(input, filter, keep_value, remove_value, params = {})
-      into = fields(params[:into] || 'filter_value')
+    # Example:
+    #     set_value 'field1', Java::CascadingOperationFilter::FilterNull.new, 1.to_java, 0.to_java, 'is_field1_null'
+    def set_value(input_fields, filter, keep_value, remove_value, into_field, params = {})
       output = params[:output] || all_fields
-      each input, :function => Java::CascadingOperationFunction::SetValue.new(into, filter, keep_value, remove_value), :output => output
+      each input_fields, :function => Java::CascadingOperationFunction::SetValue.new(fields(into_field), filter, keep_value, remove_value), :output => output
     end
 
     # Efficient way of inserting a null indicator for any field, even one that
@@ -111,37 +98,19 @@ module Cascading
     # FilterNull and SetValue operators rather than Janino.  1 is produced if
     # the field is null and 0 otherwise.
     #
-    # Parameters:
-    # * <tt>input</tt> name of field to check for null.
-    #
-    # The named options are:
-    # * <tt>:into</tt> an output field name, defaulting to 'is_null'.
-    # * <tt>:output</tt> an array of field names that specifies the fields to
-    #   retain in the output tuple.  Defaults to all_fields.
-    def null_indicator(input, params = {})
-      into = fields(params[:into] || 'is_null')
-      output = params[:output] || all_fields
-      set_value input, Java::CascadingOperationFilter::FilterNull.new, 1.to_java, 0.to_java, :into => into, :output => output
+    # Example:
+    #     null_indicator 'field1', 'is_field1_null'
+    def null_indicator(input_field, into_field, params = {})
+      set_value input_field, Java::CascadingOperationFilter::FilterNull.new, 1.to_java, 0.to_java, into_field, :output => params[:output]
     end
 
-    # Given a field and a regex, returns an indicator that is 1 if the string
+    # Given an input_field and a regex, returns an indicator that is 1 if the string
     # contains at least 1 match and 0 otherwise.
     #
-    # Parameters:
-    # * <tt>input</tt> field name or names that specifies the fields over which
-    #   to perform the match.
-    # * <tt>pattern</tt> regex to apply to the input.
-    #
-    # The named options are:
-    # * <tt>:into</tt> an output field name, defaulting to 'regex_contains'.
-    # * <tt>:output</tt> an array of field names that specifies the fields to
-    #   retain in the output tuple.  Defaults to all_fields.
-    def regex_contains(input, pattern, params = {})
-      input = fields(input)
-      pattern = pattern.to_s # Supports JRuby regexes
-      into = fields(params[:into] || 'regex_contains')
-      output = params[:output] || all_fields
-      set_value input, Java::CascadingOperationRegex::RegexFilter.new(pattern), 1.to_java, 0.to_java, :into => into, :output => output
+    # Example:
+    #     regex_contains 'field1', /\w+\s+\w+/, 'does_field1_contain_pair'
+    def regex_contains(input_field, regex, into_field, params = {})
+      set_value input_field, Java::CascadingOperationRegex::RegexFilter.new(pattern.to_s), 1.to_java, 0.to_java, into_field, :output => params[:output]
     end
 
     private
