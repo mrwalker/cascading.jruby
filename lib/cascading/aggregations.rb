@@ -108,20 +108,20 @@ module Cascading
       assert_group(assertion, params)
     end
 
-    def min(*args)
-      composite_aggregator(args, Java::CascadingOperationAggregator::Min)
+    def min(*args_with_params)
+      composite_aggregator(args_with_params, Java::CascadingOperationAggregator::Min)
     end
 
-    def max(*args)
-      composite_aggregator(args, Java::CascadingOperationAggregator::Max)
+    def max(*args_with_params)
+      composite_aggregator(args_with_params, Java::CascadingOperationAggregator::Max)
     end
 
-    def first(*args)
-      composite_aggregator(args, Java::CascadingOperationAggregator::First)
+    def first(*args_with_params)
+      composite_aggregator(args_with_params, Java::CascadingOperationAggregator::First)
     end
 
-    def last(*args)
-      composite_aggregator(args, Java::CascadingOperationAggregator::Last)
+    def last(*args_with_params)
+      composite_aggregator(args_with_params, Java::CascadingOperationAggregator::Last)
     end
 
     # Counts elements of a group.  May optionally specify the name of the
@@ -138,11 +138,11 @@ module Cascading
     # parameter (in which case they will be aggregated from the field named by
     # the key into the field named by the value after being sorted).  The type
     # of the output sum may be controlled with the :type parameter.
-    def sum(*args)
-      options = args.extract_options!
-      type = JAVA_TYPE_MAP[options[:type]]
+    def sum(*args_with_params)
+      params, in_fields = args_with_params.extract_options!, args_with_params
+      type = JAVA_TYPE_MAP[params[:type]]
 
-      mapping = options[:mapping] ? options[:mapping].sort : args.zip(args)
+      mapping = params[:mapping] ? params[:mapping].sort : in_fields.zip(in_fields)
       mapping.each do |in_field, out_field|
         sum_aggregator = Java::CascadingOperationAggregator::Sum.new(*[fields(out_field), type].compact)
         # NOTE: SumBy requires a type in wip-286, unlike Sum (see Sum.java line 42 for default)
@@ -153,9 +153,9 @@ module Cascading
     end
 
     # Averages one or more fields.  The contract of average is identical to
-    # that of other composite aggregators, but it accepts no options.
-    def average(*args)
-      field_map, _ = extract_field_map(args)
+    # that of other composite aggregators, but it accepts no params.
+    def average(*fields_or_field_map)
+      field_map, _ = extract_field_map(fields_or_field_map)
 
       field_map.each do |in_field, out_field|
         average_aggregator = Java::CascadingOperationAggregator::Average.new(fields(out_field))
@@ -169,9 +169,9 @@ module Cascading
 
     # Builds a series of every pipes for aggregation.
     #
-    # Args can either be a list of fields to aggregate and an options hash or
+    # Args can either be a list of fields to aggregate and an params hash or
     # a hash that maps input field name to output field name (similar to
-    # insert) and an options hash.
+    # insert) and an params hash.
     #
     # The named params are:
     # [ignore] Java Array of Objects (for min and max) or Tuples (for first and
@@ -189,16 +189,16 @@ module Cascading
     # Extracts a field mapping, input field => output field, by accepting a
     # hash in the first argument.  If no hash is provided, then maps arguments
     # onto themselves which names outputs the same as inputs.  Additionally
-    # extracts options from args.
+    # extracts params from args.
     def extract_field_map(args)
       if !args.empty? && args.first.kind_of?(Hash)
         field_map = args.shift.sort
-        options = args.extract_options!
+        params = args.extract_options!
       else
-        options = args.extract_options!
+        params = args.extract_options!
         field_map = args.zip(args)
       end
-      [field_map, options]
+      [field_map, params]
     end
   end
 end
