@@ -1,8 +1,12 @@
-require 'cascading/aggregator_operations'
 require 'cascading/scope'
 require 'cascading/ext/array'
 
 module Cascading
+  # Aggregations is the context available to you within the block of a group_by,
+  # union, or join that allows you to apply Every pipes to the result of those
+  # operations.  You may apply aggregators and buffers within this context
+  # subject to several rules laid out by Cascading.
+  #
   # Rules enforced by Aggregations:
   # * Contains either 1 Buffer or >= 1 Aggregator (explicitly checked)
   # * No GroupBys, CoGroups, Joins, or Merges (methods for these pipes do not exist on Aggregations)
@@ -15,6 +19,11 @@ module Cascading
   #
   # Optimizations:
   # * If the leading Group is a GroupBy and all subsequent Everies are Aggregators that have a corresponding AggregateBy, Aggregations can replace the GroupBy/Aggregator pipe with a single composite AggregateBy
+  #
+  # Aggregator and buffer DSL standard optional parameter names:
+  # [input] c.p.Every argument selector
+  # [into] c.o.Operation field declaration
+  # [output] c.p.Every output selector
   class Aggregations
     attr_reader :assembly, :tail_pipe, :scope, :aggregate_bys
 
@@ -81,8 +90,6 @@ module Cascading
       parameters = [tail_pipe, in_fields, operation, out_fields].compact
       make_pipe(Java::CascadingPipe::Every, parameters)
     end
-
-    include AggregatorOperations
 
     def assert_group(*args)
       options = args.extract_options!
@@ -183,6 +190,30 @@ module Cascading
         field_map = args.zip(args)
       end
       [field_map, options]
+    end
+
+    def aggregator_function(args, aggregator_klass)
+      options = args.extract_options!
+      ignore = options[:ignore]
+
+      parameters = [Cascading.fields(args), ignore].compact
+      aggregator_klass.new(*parameters)
+    end
+
+    def first_function(*args)
+      aggregator_function(args, Java::CascadingOperationAggregator::First)
+    end
+
+    def min_function(*args)
+      aggregator_function(args, Java::CascadingOperationAggregator::Min)
+    end
+
+    def max_function(*args)
+      aggregator_function(args, Java::CascadingOperationAggregator::Max)
+    end
+
+    def last_function(*args)
+      aggregator_function(args, Java::CascadingOperationAggregator::Last)
     end
   end
 end

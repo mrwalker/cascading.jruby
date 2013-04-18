@@ -6,17 +6,6 @@ require 'test/mock_assemblies'
 
 class TC_Aggregations < Test::Unit::TestCase
   include MockAssemblies
-  include AggregatorOperations
-
-  def test_aggregator_function_ignore_values
-    min = min_function 'min_field', :ignore => [nil].to_java(:string)
-    assert_not_nil min
-  end
-
-  def test_aggregator_function_ignore_tuples
-    first = first_function 'first_field', :ignore => [Java::CascadingTuple::Tuple.new(-1)].to_java(Java::CascadingTuple::Tuple)
-    assert_not_nil first
-  end
 
   # first chosen because it does not have a corresponding AggregateBy
   def test_create_group_by
