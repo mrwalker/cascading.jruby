@@ -1,6 +1,8 @@
 require 'cascading/expr_stub'
 
 module Cascading
+  # Mapping that defines a convenient syntax for specifying Java classes, used
+  # in Janino expressions and elsewhere.
   JAVA_TYPE_MAP = {
     :int => java.lang.Integer.java_class, :long => java.lang.Long.java_class,
     :bool => java.lang.Boolean.java_class, :double => java.lang.Double.java_class,
@@ -80,23 +82,26 @@ module Cascading
     Java::CascadingTuple::Fields::ALL
   end
 
-  def union_fields(*fields)
-    fields(fields.inject([]){ |acc, arr| acc | arr.to_a })
+  def last_grouping_fields
+    Java::CascadingTuple::Fields::VALUES
   end
 
-  def difference_fields(*fields)
-    fields(fields[1..-1].inject(fields.first.to_a){ |acc, arr| acc - arr.to_a })
+  # Computes fields formed by removing remove_fields from base_fields.  Operates
+  # only on named fields, not positional fields.
+  def difference_fields(base_fields, remove_fields)
+    fields(base_fields.to_a - remove_fields.to_a)
   end
 
-  def copy_fields(fields)
-    fields.select(all_fields)
-  end
-
+  # Combines fields deduplicating them with trailing underscores as necessary.
+  # This is used in joins to avoid requiring the caller to unique fields before
+  # they are joined.
   def dedup_fields(*fields)
     raise 'Can only be applied to declarators' unless fields.all?{ |f| f.is_declarator? }
     fields(dedup_field_names(*fields.map{ |f| f.to_a }))
   end
 
+  # Helper used by dedup_fields that operates on arrays of field names rather
+  # than fields objects.
   def dedup_field_names(*names)
     names.inject([]) do |acc, arr|
       acc + arr.map{ |e| search_field_name(acc, e) }
@@ -106,32 +111,25 @@ module Cascading
   def search_field_name(names, candidate)
     names.include?(candidate) ? search_field_name(names, "#{candidate}_") : candidate
   end
-
-  def last_grouping_fields
-    Java::CascadingTuple::Fields::VALUES
-  end
-
-  def results_fields
-    Java::CascadingTuple::Fields::RESULTS
-  end
+  private :search_field_name
 
   # Creates a TextLine scheme (can be used in both Cascading local and hadoop
   # modes).  Positional args are used if <tt>:source_fields</tt> is not
   # provided.
   #
-  # The named options are:
-  # * <tt>:source_fields</tt> a string or array of strings.  Specifies the
-  #   fields to be read from a source with this scheme.  Defaults to ['offset', 'line'].
-  # * <tt>:sink_fields</tt> a string or array of strings. Specifies the fields
-  #   to be written to a sink with this scheme.  Defaults to all_fields.
-  # * <tt>:compression</tt> a symbol, either <tt>:enable</tt> or
-  #   <tt>:disable</tt>, that governs the TextLine scheme's compression.  Defaults
-  #   to the default TextLine compression (only applies to c.s.h.TextLine).
-  def text_line_scheme(*args)
-    options = args.extract_options!
-    source_fields = fields(options[:source_fields] || (args.empty? ? ['offset', 'line'] : args))
-    sink_fields = fields(options[:sink_fields]) || all_fields
-    sink_compression = case options[:compression]
+  # The named params are:
+  # [source_fields] Fields to be read from a source with this scheme.  Defaults
+  #                 to ['offset', 'line'].
+  # [sink_fields] Fields to be written to a sink with this scheme.  Defaults to
+  #               all_fields.
+  # [compression] A symbol, either <tt>:enable</tt> or <tt>:disable</tt>, that
+  #               governs the TextLine scheme's compression.  Defaults to the
+  #               default TextLine compression (only applies to c.s.h.TextLine).
+  def text_line_scheme(*args_with_params)
+    params, source_fields = args_with_params.extract_options!, args_with_params
+    source_fields = fields(params[:source_fields] || (source_fields.empty? ? ['offset', 'line'] : source_fields))
+    sink_fields = fields(params[:sink_fields]) || all_fields
+    sink_compression = case params[:compression]
       when :enable  then Java::CascadingSchemeHadoop::TextLine::Compress::ENABLE
       when :disable then Java::CascadingSchemeHadoop::TextLine::Compress::DISABLE
       else Java::CascadingSchemeHadoop::TextLine::Compress::DEFAULT
