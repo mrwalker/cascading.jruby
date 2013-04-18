@@ -50,6 +50,8 @@ module Cascading
 
       @tail_pipe = pipe
       @scope = Scope.outgoing_scope(tail_pipe, [scope])
+
+      tail_pipe
     end
     private :make_pipe
 
@@ -74,65 +76,53 @@ module Cascading
     # Builds an every pipe and adds it to the current list of aggregations.
     # Note that this list may be either exactly 1 Buffer or any number of
     # Aggregators.
-    def every(*args)
-      options = args.extract_options!
+    def every(*args_with_params)
+      params, in_fields = args_with_params.extract_options!, fields(args_with_params)
+      out_fields = fields(params[:output])
+      operation = params[:aggregator] || params[:buffer]
+      raise 'every requires either :aggregator or :buffer' unless operation
 
-      in_fields = fields(args)
-      out_fields = fields(options[:output])
-      operation = options[:aggregator] || options[:buffer]
-
-      if options[:aggregate_by] && aggregate_bys
-        aggregate_bys << options[:aggregate_by]
+      if params[:aggregate_by] && aggregate_bys
+        aggregate_bys << params[:aggregate_by]
       else
         @aggregate_bys = nil
       end
 
       parameters = [tail_pipe, in_fields, operation, out_fields].compact
-      make_pipe(Java::CascadingPipe::Every, parameters)
+      every = make_pipe(Java::CascadingPipe::Every, parameters)
+      raise ':aggregator specified but c.o.Buffer provided' if params[:aggregator] && every.is_buffer
+      raise ':buffer specified but c.o.Aggregator provided' if params[:buffer] && every.is_aggregator
+
+      every
     end
 
-    def assert_group(*args)
-      options = args.extract_options!
-
-      assertion = args[0]
-      assertion_level = options[:level] || Java::CascadingOperation::AssertionLevel::STRICT
+    def assert_group(assertion, params = {})
+      assertion_level = params[:level] || Java::CascadingOperation::AssertionLevel::STRICT
 
       parameters = [tail_pipe, assertion_level, assertion]
       make_pipe(Java::CascadingPipe::Every, parameters)
     end
 
-    def assert_group_size_equals(*args)
-      options = args.extract_options!
-
-      assertion = Java::CascadingOperationAssertion::AssertGroupSizeEquals.new(args[0])
-      assert_group(assertion, options)
+    def assert_group_size_equals(size, params = {})
+      assertion = Java::CascadingOperationAssertion::AssertGroupSizeEquals.new(size)
+      assert_group(assertion, params)
     end
 
-    # Builds a series of every pipes for aggregation.
-    #
-    # Args can either be a list of fields to aggregate and an options hash or
-    # a hash that maps input field name to output field name (similar to
-    # insert) and an options hash.
-    #
-    # Options include:
-    # * <tt>:ignore</tt> a Java Array of Objects (for min and max) or Tuples
-    # (for first and last) of values for the aggregator to ignore
-    # * <tt>function</tt> is a symbol that is the method to call to construct
-    # the Cascading Aggregator.
-    def composite_aggregator(args, function)
-      field_map, options = extract_field_map(args)
-
-      field_map.each do |in_field, out_field|
-        agg = self.send(function, out_field, options)
-        every(in_field, :aggregator => agg, :output => all_fields)
-      end
-      raise "Composite aggregator '#{function.to_s.gsub('_function', '')}' invoked on 0 fields" if field_map.empty?
+    def min(*args)
+      composite_aggregator(args, Java::CascadingOperationAggregator::Min)
     end
 
-    def min(*args); composite_aggregator(args, :min_function); end
-    def max(*args); composite_aggregator(args, :max_function); end
-    def first(*args); composite_aggregator(args, :first_function); end
-    def last(*args); composite_aggregator(args, :last_function); end
+    def max(*args)
+      composite_aggregator(args, Java::CascadingOperationAggregator::Max)
+    end
+
+    def first(*args)
+      composite_aggregator(args, Java::CascadingOperationAggregator::First)
+    end
+
+    def last(*args)
+      composite_aggregator(args, Java::CascadingOperationAggregator::Last)
+    end
 
     # Counts elements of a group.  May optionally specify the name of the
     # output count field (defaults to 'count').
@@ -177,6 +167,25 @@ module Cascading
 
     private
 
+    # Builds a series of every pipes for aggregation.
+    #
+    # Args can either be a list of fields to aggregate and an options hash or
+    # a hash that maps input field name to output field name (similar to
+    # insert) and an options hash.
+    #
+    # The named params are:
+    # [ignore] Java Array of Objects (for min and max) or Tuples (for first and
+    #          last) of values for the aggregator to ignore.
+    def composite_aggregator(args, aggregator)
+      field_map, params = extract_field_map(args)
+
+      field_map.each do |in_field, out_field|
+        parameters = [fields(out_field), params[:ignore]].compact
+        every(in_field, :aggregator => aggregator.new(*parameters), :output => all_fields)
+      end
+      raise "Composite aggregator '#{aggregator}' invoked on 0 fields" if field_map.empty?
+    end
+
     # Extracts a field mapping, input field => output field, by accepting a
     # hash in the first argument.  If no hash is provided, then maps arguments
     # onto themselves which names outputs the same as inputs.  Additionally
@@ -190,30 +199,6 @@ module Cascading
         field_map = args.zip(args)
       end
       [field_map, options]
-    end
-
-    def aggregator_function(args, aggregator_klass)
-      options = args.extract_options!
-      ignore = options[:ignore]
-
-      parameters = [Cascading.fields(args), ignore].compact
-      aggregator_klass.new(*parameters)
-    end
-
-    def first_function(*args)
-      aggregator_function(args, Java::CascadingOperationAggregator::First)
-    end
-
-    def min_function(*args)
-      aggregator_function(args, Java::CascadingOperationAggregator::Min)
-    end
-
-    def max_function(*args)
-      aggregator_function(args, Java::CascadingOperationAggregator::Max)
-    end
-
-    def last_function(*args)
-      aggregator_function(args, Java::CascadingOperationAggregator::Last)
     end
   end
 end
