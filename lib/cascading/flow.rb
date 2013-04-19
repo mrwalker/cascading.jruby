@@ -18,10 +18,10 @@ module Cascading
     # properties are propagated through cascades.  Optionally accepts a :mode
     # which will determine the execution mode of this flow.  See
     # Cascading::Mode.parse for details.
-    def initialize(name, parent, params = {})
+    def initialize(name, parent, options = {})
       @sources, @sinks, @incoming_scopes, @outgoing_scopes, @listeners = {}, {}, {}, {}, []
-      @properties = params[:properties] || {}
-      @mode = Mode.parse(params[:mode])
+      @properties = options[:properties] || {}
+      @mode = Mode.parse(options[:mode])
       @flow_scope = Scope.flow_scope(name)
       super(name, parent)
       self.class.add(name, self)

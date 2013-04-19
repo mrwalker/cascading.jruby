@@ -17,11 +17,11 @@ module Cascading
   #
   # Function and filter DSL rules:
   # * Use positional arguments for required parameters
-  # * Use params = {} for optional parameters
+  # * Use options = {} for optional parameters
   # * Use *args sparingly, specifically when you need to accept a varying length list of fields
   # * If you require both a varying length list of fields and optional parameters, then see the Array#extract_options! extension
-  # * If you choose to name a required parameter, add it to params = {} and throw an exception if the caller does not provide it
-  # * If you have a require parameter that is provided by one of a set of params names, throw an exception if the caller does not provide at least one value (see :function and :filter in Assembly#each for an example)
+  # * If you choose to name a required parameter, add it to options = {} and throw an exception if the caller does not provide it
+  # * If you have a require parameter that is provided by one of a set of options names, throw an exception if the caller does not provide at least one value (see :function and :filter in Assembly#each for an example)
   #
   # Function and filter DSL standard optional parameter names:
   # [input] c.p.Each argument selector
@@ -125,10 +125,10 @@ module Cascading
       "#{name} : head pipe : #{head_pipe} - tail pipe: #{tail_pipe}"
     end
 
-    def prepare_join(assembly_names, params, &block)
+    def prepare_join(assembly_names, options, &block)
       pipes, _ = populate_incoming_scopes(assembly_names)
 
-      group_fields_args = params[:on]
+      group_fields_args = options[:on]
       raise 'join requires :on parameter' unless group_fields_args
 
       if group_fields_args.kind_of?(String)
@@ -149,9 +149,9 @@ module Cascading
       raise 'join requires non-empty :on parameter' if group_fields_args.empty?
       group_fields = group_fields.to_java(Java::CascadingTuple::Fields)
       incoming_fields = @incoming_scopes.map{ |s| s.values_fields }
-      declared_fields = fields(params[:declared_fields] || dedup_fields(*incoming_fields))
-      joiner = params[:joiner]
-      is_hash_join = params[:hash] || false
+      declared_fields = fields(options[:declared_fields] || dedup_fields(*incoming_fields))
+      joiner = options[:joiner]
+      is_hash_join = options[:hash] || false
 
       case joiner
       when :inner, 'inner', nil
@@ -200,47 +200,47 @@ module Cascading
     # Builds a HashJoin pipe. This should be used carefully, as the right side
     # of the join is accumulated entirely in memory. Requires a list of assembly
     # names to join and :on to specify the join_fields.
-    def hash_join(*args_with_params, &block)
-      params, assembly_names = args_with_params.extract_options!, args_with_params
-      params[:hash] = true
-      prepare_join(assembly_names, params, &block)
+    def hash_join(*args_with_options, &block)
+      options, assembly_names = args_with_options.extract_options!, args_with_options
+      options[:hash] = true
+      prepare_join(assembly_names, options, &block)
     end
 
     # Builds a join (CoGroup) pipe. Requires a list of assembly names to join
     # and :on to specify the group_fields.
-    def join(*args_with_params, &block)
-      params, assembly_names = args_with_params.extract_options!, args_with_params
-      params[:hash] = false
-      prepare_join(assembly_names, params, &block)
+    def join(*args_with_options, &block)
+      options, assembly_names = args_with_options.extract_options!, args_with_options
+      options[:hash] = false
+      prepare_join(assembly_names, options, &block)
     end
     alias co_group join
 
-    def inner_join(*args_with_params, &block)
-      params = args_with_params.extract_options!
-      params[:joiner] = :inner
-      args_with_params << params
-      join(*args_with_params, &block)
+    def inner_join(*args_with_options, &block)
+      options = args_with_options.extract_options!
+      options[:joiner] = :inner
+      args_with_options << options
+      join(*args_with_options, &block)
     end
 
-    def left_join(*args_with_params, &block)
-      params = args_with_params.extract_options!
-      params[:joiner] = :left
-      args_with_params << params
-      join(*args_with_params, &block)
+    def left_join(*args_with_options, &block)
+      options = args_with_options.extract_options!
+      options[:joiner] = :left
+      args_with_options << options
+      join(*args_with_options, &block)
     end
 
-    def right_join(*args_with_params, &block)
-      params = args_with_params.extract_options!
-      params[:joiner] = :right
-      args_with_params << params
-      join(*args_with_params, &block)
+    def right_join(*args_with_options, &block)
+      options = args_with_options.extract_options!
+      options[:joiner] = :right
+      args_with_options << options
+      join(*args_with_options, &block)
     end
 
-    def outer_join(*args_with_params, &block)
-      params = args_with_params.extract_options!
-      params[:joiner] = :outer
-      args_with_params << params
-      join(*args_with_params, &block)
+    def outer_join(*args_with_options, &block)
+      options = args_with_options.extract_options!
+      options[:joiner] = :outer
+      args_with_options << options
+      join(*args_with_options, &block)
     end
 
     # Builds a new branch.
@@ -253,12 +253,12 @@ module Cascading
     end
 
     # Builds a new GroupBy pipe that groups on the fields given in
-    # args_with_params. Any block passed to this method should contain only
+    # args_with_options. Any block passed to this method should contain only
     # Everies.
-    def group_by(*args_with_params, &block)
-      params, group_fields = args_with_params.extract_options!, fields(args_with_params)
-      sort_fields = fields(params[:sort_by])
-      reverse = params[:reverse]
+    def group_by(*args_with_options, &block)
+      options, group_fields = args_with_options.extract_options!, fields(args_with_options)
+      sort_fields = fields(options[:sort_by])
+      reverse = options[:reverse]
 
       parameters = [tail_pipe, group_fields, sort_fields, reverse].compact
       apply_aggregations(Java::CascadingPipe::GroupBy.new(*parameters), [scope], &block)
@@ -270,11 +270,11 @@ module Cascading
     # aggregations.
     #
     # By default, groups only on the first field (see line 189 of GroupBy.java)
-    def union(*args_with_params, &block)
-      params, assembly_names = args_with_params.extract_options!, args_with_params
-      group_fields = fields(params[:on])
-      sort_fields = fields(params[:sort_by])
-      reverse = params[:reverse]
+    def union(*args_with_options, &block)
+      options, assembly_names = args_with_options.extract_options!, args_with_options
+      group_fields = fields(options[:on])
+      sort_fields = fields(options[:sort_by])
+      reverse = options[:reverse]
 
       pipes, _ = populate_incoming_scopes(assembly_names)
 
@@ -306,17 +306,17 @@ module Cascading
     # Builds a basic each pipe, and adds it to the current assembly.
     #
     # Default arguments are all_fields, a default inherited from c.o.Each.
-    def each(*args_with_params)
-      params, in_fields = args_with_params.extract_options!, fields(args_with_params)
-      out_fields = fields(params[:output]) # Default Fields.RESULTS from c.o.Each
-      operation = params[:filter] || params[:function]
+    def each(*args_with_options)
+      options, in_fields = args_with_options.extract_options!, fields(args_with_options)
+      out_fields = fields(options[:output]) # Default Fields.RESULTS from c.o.Each
+      operation = options[:filter] || options[:function]
       raise 'each requires either :filter or :function' unless operation
-      raise 'c.p.Each does not support applying an output selector to a c.o.Filter' if params[:filter] && params[:output]
+      raise 'c.p.Each does not support applying an output selector to a c.o.Filter' if options[:filter] && options[:output]
 
       parameters = [tail_pipe, in_fields, operation, out_fields].compact
       each = make_pipe(Java::CascadingPipe::Each, parameters)
-      raise ':function specified but c.o.Filter provided' if params[:function] && each.is_filter
-      raise ':filter specified but c.o.Function provided' if params[:filter] && each.is_function
+      raise ':function specified but c.o.Filter provided' if options[:function] && each.is_filter
+      raise ':filter specified but c.o.Function provided' if options[:filter] && each.is_function
 
       each
     end
@@ -327,23 +327,23 @@ module Cascading
     include RegexOperations
     include TextOperations
 
-    def assert(assertion, params = {})
-      assertion_level = params[:level] || Java::CascadingOperation::AssertionLevel::STRICT
+    def assert(assertion, options = {})
+      assertion_level = options[:level] || Java::CascadingOperation::AssertionLevel::STRICT
 
       parameters = [tail_pipe, assertion_level, assertion]
       make_pipe(Java::CascadingPipe::Each, parameters)
     end
 
     # Builds a pipe that assert the size of the tuple is the size specified in parameter.
-    def assert_size_equals(size, params = {})
+    def assert_size_equals(size, options = {})
       assertion = Java::CascadingOperationAssertion::AssertSizeEquals.new(size)
-      assert(assertion, params)
+      assert(assertion, options)
     end
 
     # Builds a pipe that assert the none of the fields in the tuple are null.
-    def assert_not_null(params = {})
+    def assert_not_null(options = {})
       assertion = Java::CascadingOperationAssertion::AssertNotNull.new
-      assert(assertion, params)
+      assert(assertion, options)
     end
   end
 end

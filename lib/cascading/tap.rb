@@ -32,17 +32,17 @@ module Cascading
   class Tap < BaseTap
     attr_reader :scheme, :path, :sink_mode
 
-    def initialize(path, params = {})
+    def initialize(path, options = {})
       @path = path
 
-      @scheme = params[:scheme] || text_line_scheme
+      @scheme = options[:scheme] || text_line_scheme
       raise "Scheme must provide one of :local_scheme or :hadoop_scheme; received: '#{scheme.inspect}'" unless scheme[:local_scheme] || scheme[:hadoop_scheme]
 
-      @sink_mode = case params[:sink_mode] || :keep
+      @sink_mode = case options[:sink_mode] || :keep
         when :keep, 'keep'       then Java::CascadingTap::SinkMode::KEEP
         when :replace, 'replace' then Java::CascadingTap::SinkMode::REPLACE
         when :append, 'append'   then Java::CascadingTap::SinkMode::APPEND
-        else raise "Unrecognized sink mode '#{params[:sink_mode]}'"
+        else raise "Unrecognized sink mode '#{options[:sink_mode]}'"
       end
 
       local_scheme = scheme[:local_scheme]

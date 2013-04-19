@@ -11,7 +11,7 @@ module Cascading
   module FilterOperations
     # Filter the current assembly based on an expression or regex, but not both.
     #
-    # The named params are:
+    # The named options are:
     # [expression] A Janino expression used to filter.  Has access to all :input
     #              fields.
     # [validate] Boolean passed to Cascading#expr to enable or disable
@@ -28,12 +28,12 @@ module Cascading
     # Example:
     #     filter :input => 'field1', :regex => /\t/, :remove_match => true
     #     filter :expression => 'field1:long > 0 && "".equals(field2:string)', :remove_match => true
-    def filter(params = {})
-      input_fields = params[:input] || all_fields
-      expression = params[:expression]
-      regex = params[:regex]
-      validate = params.has_key?(:validate) ? params[:validate] : true
-      validate_with = params[:validate_with] || {}
+    def filter(options = {})
+      input_fields = options[:input] || all_fields
+      expression = options[:expression]
+      regex = options[:regex]
+      validate = options.has_key?(:validate) ? options[:validate] : true
+      validate_with = options[:validate_with] || {}
 
       if expression
         stub = expr(expression, { :validate => validate, :validate_with => validate_with })
@@ -46,7 +46,7 @@ module Cascading
             types
           )
       elsif regex
-        parameters = [regex.to_s, params[:remove_match], params[:match_each_element]].compact
+        parameters = [regex.to_s, options[:remove_match], options[:match_each_element]].compact
         each input_fields, :filter => Java::CascadingOperationRegex::RegexFilter.new(*parameters)
       else
         raise 'filter requires one of :expression or :regex'
@@ -58,9 +58,9 @@ module Cascading
     #
     # Example:
     #     reject 'field1:long > 0 && "".equals(field2:string)'
-    def reject(expression, params = {})
-      params[:expression] = expression
-      filter(params)
+    def reject(expression, options = {})
+      options[:expression] = expression
+      filter(options)
     end
 
     # Keeps tuples from the current assembly based on a Janino expression.  This
@@ -73,10 +73,10 @@ module Cascading
     #
     # Example:
     #     where 'field1:long > 0 && "".equals(field2:string)'
-    def where(expression, params = {})
+    def where(expression, options = {})
       _, imports, expr = expression.match(/^((?:\s*import.*;\s*)*)(.*)$/).to_a
-      params[:expression] = "#{imports}!(#{expr})"
-      filter(params)
+      options[:expression] = "#{imports}!(#{expr})"
+      filter(options)
     end
 
     # Rejects tuples from the current assembly if any input field is null.

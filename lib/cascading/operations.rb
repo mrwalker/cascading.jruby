@@ -3,7 +3,7 @@ module Cascading
     # Debugs the current assembly at runtime, printing every tuple and fields
     # every 10 tuples by default.
     #
-    # The named params are:
+    # The named options are:
     # [prefix] String to prefix prints with.
     # [print_fields] Boolean controlling field printing, defaults to false.
     # [tuple_interval] Integer specifying interval between printed tuples
@@ -11,16 +11,15 @@ module Cascading
     #
     # Example:
     #     debug :prefix => 'DEBUG', :print_fields => true, :fields_interval => 1000
-    def debug(params = {})
-      input_fields = params[:input] || all_fields
-      prefix = params[:prefix]
-      print_fields = params[:print_fields]
+    def debug(options = {})
+      input_fields = options[:input] || all_fields
+      prefix = options[:prefix]
+      print_fields = options[:print_fields]
 
-      parameters = [prefix, print_fields].compact
-      debug = Java::CascadingOperation::Debug.new(*parameters)
+      debug = Java::CascadingOperation::Debug.new(*[prefix, print_fields].compact)
 
-      debug.print_tuple_every = params[:tuple_interval] || 1
-      debug.print_fields_every = params[:fields_interval] || 10
+      debug.print_tuple_every = options[:tuple_interval] || 1
+      debug.print_fields_every = options[:fields_interval] || 10
 
       each(input_fields, :filter => debug)
     end
@@ -57,7 +56,7 @@ module Cascading
     #
     # You must provide exactly one of :value_selectors and :num_values.
     #
-    # The named params are:
+    # The named options are:
     # [value_selectors] Array of field names to ungroup. Each field will be
     #                   ungrouped into an output tuple along with the key fields
     #                   in the order provided.
@@ -67,13 +66,13 @@ module Cascading
     #
     # Example:
     #     ungroup 'key', ['new_key', 'val], :value_selectors => ['val1', 'val2', 'val3'], :output => ['new_key', 'val']
-    def ungroup(key, into_fields, params = {})
-      input_fields = params[:input] || all_fields
-      output = params[:output] || all_fields
+    def ungroup(key, into_fields, options = {})
+      input_fields = options[:input] || all_fields
+      output = options[:output] || all_fields
 
-      raise 'You must provide exactly one of :value_selectors or :num_values to ungroup' unless params.has_key?(:value_selectors) ^ params.has_key?(:num_values)
-      value_selectors = params[:value_selectors].map{ |vs| fields(vs) }.to_java(Java::CascadingTuple::Fields) if params.has_key?(:value_selectors)
-      num_values = params[:num_values] if params.has_key?(:num_values)
+      raise 'You must provide exactly one of :value_selectors or :num_values to ungroup' unless options.has_key?(:value_selectors) ^ options.has_key?(:num_values)
+      value_selectors = options[:value_selectors].map{ |vs| fields(vs) }.to_java(Java::CascadingTuple::Fields) if options.has_key?(:value_selectors)
+      num_values = options[:num_values] if options.has_key?(:num_values)
 
       parameters = [fields(into_fields), fields(key), value_selectors, num_values].compact
       each input_fields, :function => Java::CascadingOperationFunction::UnGroup.new(*parameters), :output => output
@@ -88,8 +87,8 @@ module Cascading
     #
     # Example:
     #     set_value 'field1', Java::CascadingOperationFilter::FilterNull.new, 1.to_java, 0.to_java, 'is_field1_null'
-    def set_value(input_fields, filter, keep_value, remove_value, into_field, params = {})
-      output = params[:output] || all_fields
+    def set_value(input_fields, filter, keep_value, remove_value, into_field, options = {})
+      output = options[:output] || all_fields
       each input_fields, :function => Java::CascadingOperationFunction::SetValue.new(fields(into_field), filter, keep_value, remove_value), :output => output
     end
 
@@ -100,8 +99,8 @@ module Cascading
     #
     # Example:
     #     null_indicator 'field1', 'is_field1_null'
-    def null_indicator(input_field, into_field, params = {})
-      set_value input_field, Java::CascadingOperationFilter::FilterNull.new, 1.to_java, 0.to_java, into_field, :output => params[:output]
+    def null_indicator(input_field, into_field, options = {})
+      set_value input_field, Java::CascadingOperationFilter::FilterNull.new, 1.to_java, 0.to_java, into_field, :output => options[:output]
     end
 
     # Given an input_field and a regex, returns an indicator that is 1 if the string
@@ -109,8 +108,8 @@ module Cascading
     #
     # Example:
     #     regex_contains 'field1', /\w+\s+\w+/, 'does_field1_contain_pair'
-    def regex_contains(input_field, regex, into_field, params = {})
-      set_value input_field, Java::CascadingOperationRegex::RegexFilter.new(pattern.to_s), 1.to_java, 0.to_java, into_field, :output => params[:output]
+    def regex_contains(input_field, regex, into_field, options = {})
+      set_value input_field, Java::CascadingOperationRegex::RegexFilter.new(pattern.to_s), 1.to_java, 0.to_java, into_field, :output => options[:output]
     end
 
     private

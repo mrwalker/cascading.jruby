@@ -2,14 +2,14 @@ OUTPUT_DIR = 'output'
 BUILD_DIR = 'build/spec'
 
 module ScopeTests
-  def check_scope(params = {})
-    name_params = [params[:source]].compact
-    scope = scope(*name_params)
-    values_fields = params[:values_fields]
-    grouping_fields = params[:grouping_fields] || values_fields
+  def check_scope(options = {})
+    name_options = [options[:source]].compact
+    scope = scope(*name_options)
+    values_fields = options[:values_fields]
+    grouping_fields = options[:grouping_fields] || values_fields
 
-    debug = params[:debug]
-    debug_scope(*name_params) if debug
+    debug = options[:debug]
+    debug_scope(*name_options) if debug
 
     scope.values_fields.to_a.should == values_fields
     scope.grouping_fields.to_a.should == grouping_fields
@@ -29,8 +29,8 @@ def test_flow(&block)
   cascade.complete
 end
 
-def test_assembly(params = {}, &block)
-  branches = params[:branches] || []
+def test_assembly(options = {}, &block)
+  branches = options[:branches] || []
 
   test_flow do
     source 'input', tap('spec/resource/test_input.txt', :scheme => text_line_scheme)
@@ -49,9 +49,9 @@ def test_assembly(params = {}, &block)
   end
 end
 
-def test_join_assembly(params = {}, &block)
-  branches = params[:branches] || []
-  post_join_block = params[:post_join_block]
+def test_join_assembly(options = {}, &block)
+  branches = options[:branches] || []
+  post_join_block = options[:post_join_block]
 
   test_flow do
     source 'left', tap('spec/resource/join_input.txt', :scheme => text_line_scheme)

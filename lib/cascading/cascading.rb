@@ -28,13 +28,13 @@ module Cascading
 
   # Builds a top-level cascade given a name and a block.  Optionally accepts a
   # :mode, as explained in Cascading::Cascade#initialize.
-  def cascade(name, params = {}, &block)
+  def cascade(name, options = {}, &block)
     raise "Could not build cascade '#{name}'; block required" unless block_given?
-    raise 'Cascading::cascade does not accept the :properties param only the global $jobconf_properties' if params[:properties]
+    raise 'Cascading::cascade does not accept the :properties param only the global $jobconf_properties' if options[:properties]
 
-    params[:properties] = $jobconf_properties.dup if defined?($jobconf_properties) && $jobconf_properties
+    options[:properties] = $jobconf_properties.dup if defined?($jobconf_properties) && $jobconf_properties
 
-    cascade = Cascade.new(name, params)
+    cascade = Cascade.new(name, options)
     cascade.instance_eval(&block)
     cascade
   end
@@ -42,13 +42,13 @@ module Cascading
   # Builds a top-level flow given a name and block for applications built of
   # flows with no cascades.  Optionally accepts a :mode, as explained in
   # Cascading::Flow#initialize.
-  def flow(name, params = {}, &block)
+  def flow(name, options = {}, &block)
     raise "Could not build flow '#{name}'; block required" unless block_given?
-    raise 'Cascading::flow does not accept the :properties param only the global $jobconf_properties' if params[:properties]
+    raise 'Cascading::flow does not accept the :properties param only the global $jobconf_properties' if options[:properties]
 
-    params[:properties] = $jobconf_properties.dup if defined?($jobconf_properties) && $jobconf_properties
+    options[:properties] = $jobconf_properties.dup if defined?($jobconf_properties) && $jobconf_properties
 
-    flow = Flow.new(name, nil, params)
+    flow = Flow.new(name, nil, options)
     flow.instance_eval(&block)
     flow
   end
@@ -59,8 +59,8 @@ module Cascading
   alias desc describe
 
   # See ExprStub.expr
-  def expr(expression, params = {})
-    ExprStub.expr(expression, params)
+  def expr(expression, options = {})
+    ExprStub.expr(expression, options)
   end
 
   # Creates a cascading.tuple.Fields instance from a string or an array of strings.
@@ -117,7 +117,7 @@ module Cascading
   # modes).  Positional args are used if <tt>:source_fields</tt> is not
   # provided.
   #
-  # The named params are:
+  # The named options are:
   # [source_fields] Fields to be read from a source with this scheme.  Defaults
   #                 to ['offset', 'line'].
   # [sink_fields] Fields to be written to a sink with this scheme.  Defaults to
@@ -125,11 +125,11 @@ module Cascading
   # [compression] A symbol, either <tt>:enable</tt> or <tt>:disable</tt>, that
   #               governs the TextLine scheme's compression.  Defaults to the
   #               default TextLine compression (only applies to c.s.h.TextLine).
-  def text_line_scheme(*args_with_params)
-    params, source_fields = args_with_params.extract_options!, args_with_params
-    source_fields = fields(params[:source_fields] || (source_fields.empty? ? ['offset', 'line'] : source_fields))
-    sink_fields = fields(params[:sink_fields]) || all_fields
-    sink_compression = case params[:compression]
+  def text_line_scheme(*args_with_options)
+    options, source_fields = args_with_options.extract_options!, args_with_options
+    source_fields = fields(options[:source_fields] || (source_fields.empty? ? ['offset', 'line'] : source_fields))
+    sink_fields = fields(options[:sink_fields]) || all_fields
+    sink_compression = case options[:compression]
       when :enable  then Java::CascadingSchemeHadoop::TextLine::Compress::ENABLE
       when :disable then Java::CascadingSchemeHadoop::TextLine::Compress::DISABLE
       else Java::CascadingSchemeHadoop::TextLine::Compress::DEFAULT
@@ -160,8 +160,8 @@ module Cascading
   end
 
   # Creates a Cascading::Tap given a path and optional :scheme and :sink_mode.
-  def tap(path, params = {})
-    Tap.new(path, params)
+  def tap(path, options = {})
+    Tap.new(path, options)
   end
 
   # Constructs properties to be passed to Flow#complete or Cascade#complete

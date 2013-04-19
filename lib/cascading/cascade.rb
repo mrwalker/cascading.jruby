@@ -17,9 +17,9 @@ module Cascading
     # Cascading::Flow#initialize for details on how flows handle properties.
     # Optionally accepts a :mode which will be used as the default mode for all
     # child flows.  See Cascading::Mode.parse for details.
-    def initialize(name, params = {})
-      @properties = params[:properties] || {}
-      @mode = params[:mode]
+    def initialize(name, options = {})
+      @properties = options[:properties] || {}
+      @mode = options[:mode]
       super(name, nil) # A Cascade cannot have a parent
       self.class.add(name, self)
     end
@@ -28,13 +28,13 @@ module Cascading
     # :properties which will override the default properties stroed in this
     # cascade.  Optionally accepts a :mode, which will override the default
     # mode stored in this cascade.
-    def flow(name, params = {}, &block)
+    def flow(name, options = {}, &block)
       raise "Could not build flow '#{name}'; block required" unless block_given?
 
-      params[:properties] ||= properties.dup
-      params[:mode] ||= mode
+      options[:properties] ||= properties.dup
+      options[:mode] ||= mode
 
-      flow = Flow.new(name, self, params)
+      flow = Flow.new(name, self, options)
       add_child(flow)
       flow.instance_eval(&block)
       flow

@@ -76,52 +76,52 @@ module Cascading
     # Builds an every pipe and adds it to the current list of aggregations.
     # Note that this list may be either exactly 1 Buffer or any number of
     # Aggregators.
-    def every(*args_with_params)
-      params, in_fields = args_with_params.extract_options!, fields(args_with_params)
-      out_fields = fields(params[:output])
-      operation = params[:aggregator] || params[:buffer]
+    def every(*args_with_options)
+      options, in_fields = args_with_options.extract_options!, fields(args_with_options)
+      out_fields = fields(options[:output])
+      operation = options[:aggregator] || options[:buffer]
       raise 'every requires either :aggregator or :buffer' unless operation
 
-      if params[:aggregate_by] && aggregate_bys
-        aggregate_bys << params[:aggregate_by]
+      if options[:aggregate_by] && aggregate_bys
+        aggregate_bys << options[:aggregate_by]
       else
         @aggregate_bys = nil
       end
 
       parameters = [tail_pipe, in_fields, operation, out_fields].compact
       every = make_pipe(Java::CascadingPipe::Every, parameters)
-      raise ':aggregator specified but c.o.Buffer provided' if params[:aggregator] && every.is_buffer
-      raise ':buffer specified but c.o.Aggregator provided' if params[:buffer] && every.is_aggregator
+      raise ':aggregator specified but c.o.Buffer provided' if options[:aggregator] && every.is_buffer
+      raise ':buffer specified but c.o.Aggregator provided' if options[:buffer] && every.is_aggregator
 
       every
     end
 
-    def assert_group(assertion, params = {})
-      assertion_level = params[:level] || Java::CascadingOperation::AssertionLevel::STRICT
+    def assert_group(assertion, options = {})
+      assertion_level = options[:level] || Java::CascadingOperation::AssertionLevel::STRICT
 
       parameters = [tail_pipe, assertion_level, assertion]
       make_pipe(Java::CascadingPipe::Every, parameters)
     end
 
-    def assert_group_size_equals(size, params = {})
+    def assert_group_size_equals(size, options = {})
       assertion = Java::CascadingOperationAssertion::AssertGroupSizeEquals.new(size)
-      assert_group(assertion, params)
+      assert_group(assertion, options)
     end
 
-    def min(*args_with_params)
-      composite_aggregator(args_with_params, Java::CascadingOperationAggregator::Min)
+    def min(*args_with_options)
+      composite_aggregator(args_with_options, Java::CascadingOperationAggregator::Min)
     end
 
-    def max(*args_with_params)
-      composite_aggregator(args_with_params, Java::CascadingOperationAggregator::Max)
+    def max(*args_with_options)
+      composite_aggregator(args_with_options, Java::CascadingOperationAggregator::Max)
     end
 
-    def first(*args_with_params)
-      composite_aggregator(args_with_params, Java::CascadingOperationAggregator::First)
+    def first(*args_with_options)
+      composite_aggregator(args_with_options, Java::CascadingOperationAggregator::First)
     end
 
-    def last(*args_with_params)
-      composite_aggregator(args_with_params, Java::CascadingOperationAggregator::Last)
+    def last(*args_with_options)
+      composite_aggregator(args_with_options, Java::CascadingOperationAggregator::Last)
     end
 
     # Counts elements of a group.  May optionally specify the name of the
@@ -138,11 +138,11 @@ module Cascading
     # parameter (in which case they will be aggregated from the field named by
     # the key into the field named by the value after being sorted).  The type
     # of the output sum may be controlled with the :type parameter.
-    def sum(*args_with_params)
-      params, in_fields = args_with_params.extract_options!, args_with_params
-      type = JAVA_TYPE_MAP[params[:type]]
+    def sum(*args_with_options)
+      options, in_fields = args_with_options.extract_options!, args_with_options
+      type = JAVA_TYPE_MAP[options[:type]]
 
-      mapping = params[:mapping] ? params[:mapping].sort : in_fields.zip(in_fields)
+      mapping = options[:mapping] ? options[:mapping].sort : in_fields.zip(in_fields)
       mapping.each do |in_field, out_field|
         sum_aggregator = Java::CascadingOperationAggregator::Sum.new(*[fields(out_field), type].compact)
         # NOTE: SumBy requires a type in wip-286, unlike Sum (see Sum.java line 42 for default)
@@ -153,7 +153,7 @@ module Cascading
     end
 
     # Averages one or more fields.  The contract of average is identical to
-    # that of other composite aggregators, but it accepts no params.
+    # that of other composite aggregators, but it accepts no options.
     def average(*fields_or_field_map)
       field_map, _ = extract_field_map(fields_or_field_map)
 
@@ -169,19 +169,22 @@ module Cascading
 
     # Builds a series of every pipes for aggregation.
     #
-    # Args can either be a list of fields to aggregate and an params hash or
+    # Args can either be a list of fields to aggregate and an options hash or
     # a hash that maps input field name to output field name (similar to
-    # insert) and an params hash.
+    # insert) and an options hash.
     #
-    # The named params are:
+    # The named options are:
     # [ignore] Java Array of Objects (for min and max) or Tuples (for first and
     #          last) of values for the aggregator to ignore.
     def composite_aggregator(args, aggregator)
-      field_map, params = extract_field_map(args)
+      field_map, options = extract_field_map(args)
 
       field_map.each do |in_field, out_field|
-        parameters = [fields(out_field), params[:ignore]].compact
-        every(in_field, :aggregator => aggregator.new(*parameters), :output => all_fields)
+        every(
+          in_field,
+          :aggregator => aggregator.new(*[fields(out_field), options[:ignore]].compact),
+          :output => all_fields
+        )
       end
       raise "Composite aggregator '#{aggregator}' invoked on 0 fields" if field_map.empty?
     end
@@ -189,16 +192,16 @@ module Cascading
     # Extracts a field mapping, input field => output field, by accepting a
     # hash in the first argument.  If no hash is provided, then maps arguments
     # onto themselves which names outputs the same as inputs.  Additionally
-    # extracts params from args.
+    # extracts options from args.
     def extract_field_map(args)
       if !args.empty? && args.first.kind_of?(Hash)
         field_map = args.shift.sort
-        params = args.extract_options!
+        options = args.extract_options!
       else
-        params = args.extract_options!
+        options = args.extract_options!
         field_map = args.zip(args)
       end
-      [field_map, params]
+      [field_map, options]
     end
   end
 end

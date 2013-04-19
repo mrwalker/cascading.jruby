@@ -12,8 +12,8 @@ module Cascading
     #
     # Example:
     #     parse_date 'text_date', 'yyyy/MM/dd', 'timestamp'
-    def parse_date(input_field, date_format, into_field, params = {})
-      output = params[:output] || all_fields # Overrides Cascading default
+    def parse_date(input_field, date_format, into_field, options = {})
+      output = options[:output] || all_fields # Overrides Cascading default
 
       input_field = fields(input_field)
       raise "input_field must declare exactly one field, was '#{input_field}'" unless input_field.size == 1
@@ -32,8 +32,8 @@ module Cascading
     #
     # Example:
     #     format_date 'timestamp', 'yyyy/MM/dd', 'text_date'
-    def format_date(input_field, date_format, into_field, params = {})
-      output = params[:output] || all_fields # Overrides Cascading default
+    def format_date(input_field, date_format, into_field, options = {})
+      output = options[:output] || all_fields # Overrides Cascading default
 
       input_field = fields(input_field)
       raise "input_field must declare exactly one field, was '#{input_field}'" unless input_field.size == 1
@@ -52,7 +52,7 @@ module Cascading
     # Example:
     #     join_fields ['field1', 'field2'], ',', 'comma_separated'
     def join_fields(input_fields, delimiter, into_field)
-      output = params[:output] || all_fields # Overrides Cascading default
+      output = options[:output] || all_fields # Overrides Cascading default
 
       into_field = fields(into_field)
       raise "into_field must declare exactly one field, was '#{into_field}'" unless into_field.size == 1

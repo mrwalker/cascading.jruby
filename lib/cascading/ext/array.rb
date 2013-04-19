@@ -5,16 +5,16 @@
 #     end
 #
 # The most obvious limitation of the approach is that function definitions of
-# the form f(*args_with_params) are not self-documenting.  To compensate for
+# the form f(*args_with_options) are not self-documenting.  To compensate for
 # this, documentation of all arguments and optional parameters must be provided
 # on the DSL method.
 class Array
   # Use this extension to extract the optional parameters from a
-  # *args_with_params argument.
+  # *args_with_options argument.
   # So if you have a function:
-  #     def f(*args_with_params)
-  # You can destructively process the args_with_params as follows:
-  #     params, just_args = args_with_params.extract_options!, args_with_params
+  #     def f(*args_with_options)
+  # You can destructively process the args_with_options as follows:
+  #     options, just_args = args_with_options.extract_options!, args_with_options
   def extract_options!
      last.is_a?(::Hash) ? pop : {}
   end

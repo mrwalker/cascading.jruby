@@ -21,15 +21,15 @@ module Cascading
     # Parses the given input_field using the specified regular expression to
     # produce one output per group in that expression.
     #
-    # The named params are:
+    # The named options are:
     # [groups] Array of integers specifying which groups to capture if you want
     #          a subset of groups.
     #
     # Example:
     #     parse 'field1', /(\w+)\s+(\w+)/, ['out1', 'out2'], :groups => [1, 2]
-    def parse(input_field, regex, into_fields, params = {})
-      groups = params[:groups].to_java(:int) if params[:groups]
-      output = params[:output] || all_fields # Overrides Cascading default
+    def parse(input_field, regex, into_fields, options = {})
+      groups = options[:groups].to_java(:int) if options[:groups]
+      output = options[:output] || all_fields # Overrides Cascading default
 
       input_field = fields(input_field)
       raise "input_field must declare exactly one field, was '#{input_field}'" unless input_field.size == 1
@@ -47,8 +47,8 @@ module Cascading
     #
     # Example:
     #     split 'line', /\s+/, ['out1', 'out2']
-    def split(input_field, regex, into_fields, params = {})
-      output = params[:output] || all_fields # Overrides Cascading default
+    def split(input_field, regex, into_fields, options = {})
+      output = options[:output] || all_fields # Overrides Cascading default
 
       input_field = fields(input_field)
       raise "input_field must declare exactly one field, was '#{input_field}'" unless input_field.size == 1
@@ -65,8 +65,8 @@ module Cascading
     #
     # Example:
     #     split_rows 'line', /\s+/, 'word'
-    def split_rows(input_field, regex, into_field, params = {})
-      output = params[:output] || all_fields # Overrides Cascading default
+    def split_rows(input_field, regex, into_field, options = {})
+      output = options[:output] || all_fields # Overrides Cascading default
 
       input_field = fields(input_field)
       raise "input_field must declare exactly one field, was '#{input_field}'" unless input_field.size == 1
@@ -85,8 +85,8 @@ module Cascading
     #
     # Example:
     #     match_rows 'line', /(\w+)\s+(\w+)/, 'word'
-    def match_rows(input_field, regex, into_field, params = {})
-      output = params[:output] || all_fields # Overrides Cascading default
+    def match_rows(input_field, regex, into_field, options = {})
+      output = options[:output] || all_fields # Overrides Cascading default
 
       input_field = fields(input_field)
       raise "input_field must declare exactly one field, was '#{input_field}'" unless input_field.size == 1
@@ -103,21 +103,21 @@ module Cascading
     # Performs a query/replace on the given input_field using the specified
     # regular expression and replacement.
     #
-    # The named params are:
+    # The named options are:
     # [replace_all] Boolean indicating if all matches should be replaced;
     #               defaults to true (the Cascading default).
     #
     # Example:
     #     replace 'line', /[.,]*\s+/, 'tab_separated_line', "\t"
-    def replace(input_field, regex, into_field, replacement, params = {})
-      output = params[:output] || all_fields # Overrides Cascading default
+    def replace(input_field, regex, into_field, replacement, options = {})
+      output = options[:output] || all_fields # Overrides Cascading default
 
       input_field = fields(input_field)
       raise "input_field must declare exactly one field, was '#{input_field}'" unless input_field.size == 1
       into_field = fields(into_field)
       raise "into_field must declare exactly one field, was '#{into_field}'" unless into_field.size == 1
 
-      parameters = [into_field, regex.to_s, replacement.to_s, params[:replace_all]].compact
+      parameters = [into_field, regex.to_s, replacement.to_s, options[:replace_all]].compact
       each(
         input_field,
         :function => Java::CascadingOperationRegex::RegexReplace.new(*parameters),
