@@ -27,15 +27,16 @@ module Cascading
     #
     # Example:
     #     filter :input => 'field1', :regex => /\t/, :remove_match => true
-    #     filter :expression => 'field1:long > 0 && "".equals(field2:string)', :remove_match => true
+    #     filter :expression => 'field1:long > 0 && "".equals(field2:string)'
     def filter(options = {})
       input_fields = options[:input] || all_fields
       expression = options[:expression]
       regex = options[:regex]
-      validate = options.has_key?(:validate) ? options[:validate] : true
-      validate_with = options[:validate_with] || {}
 
       if expression
+        validate = options.has_key?(:validate) ? options[:validate] : true
+        validate_with = options[:validate_with] || {}
+
         stub = expr(expression, { :validate => validate, :validate_with => validate_with })
         stub.validate_scope(scope)
 

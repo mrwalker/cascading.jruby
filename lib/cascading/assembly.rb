@@ -27,6 +27,11 @@ module Cascading
   # [input] c.p.Each argument selector
   # [into] c.o.Operation field declaration
   # [output] c.p.Each output selector
+  #
+  # A note on aliases: when a DSL method uniquely wraps a single Cascading
+  # operation, we attempt to provide an alias that matches the Cascading
+  # operation.  However, Cascading operations are often nouns rather than verbs,
+  # and the latter are preferable for a dataflow DSL.
   class Assembly < Cascading::Node
     attr_reader :head_pipe, :tail_pipe
 

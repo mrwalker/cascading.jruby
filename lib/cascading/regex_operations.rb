@@ -41,6 +41,7 @@ module Cascading
         :output => output
       )
     end
+    alias regex_parser parse
 
     # Splits the given input_field into multiple fields using the specified
     # regular expression.
@@ -59,6 +60,7 @@ module Cascading
         :output => output
       )
     end
+    alias regex_splitter split
 
     # Splits the given input_field into new rows using the specified regular
     # expression.
@@ -79,6 +81,7 @@ module Cascading
         :output => output
       )
     end
+    alias regex_split_generator split_rows
 
     # Emits a new row for each regex group matched in input_field using the
     # specified regular expression.
@@ -99,6 +102,7 @@ module Cascading
         :output => output
       )
     end
+    alias regex_generator match_rows
 
     # Performs a query/replace on the given input_field using the specified
     # regular expression and replacement.
@@ -124,5 +128,6 @@ module Cascading
         :output => output
       )
     end
+    alias regex_replace replace
   end
 end
