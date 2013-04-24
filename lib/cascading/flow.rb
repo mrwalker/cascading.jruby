@@ -1,6 +1,10 @@
 require 'cascading/assembly'
 
 module Cascading
+  # A Flow wraps a c.f.Flow.  A Flow is composed of Assemblies, which are
+  # constructed using the Flow#assembly method within the block passed to the
+  # Cascading::flow or Cascade#flow constructor.  Many Assemblies may be nested
+  # within a Flow.
   class Flow < Cascading::Node
     extend Registerable
 
@@ -10,14 +14,16 @@ module Cascading
     # Do not use this constructor directly.  Instead, use Cascading::flow to
     # build top-level flows and Cascade#flow to build flows within a Cascade.
     #
-    # Builds a flow given a name and a parent node (a cascade or nil).
-    # Optionally accepts :properties which allows external configuration of
-    # this flow.  The flow will side-effect the properties during composition,
-    # then pass the modified properties along to the FlowConnector for
-    # execution. See Cascading::Cascade#initialize for details on how
-    # properties are propagated through cascades.  Optionally accepts a :mode
-    # which will determine the execution mode of this flow.  See
-    # Cascading::Mode.parse for details.
+    # Builds a Flow given a name and a parent node (a Cascade or nil).
+    #
+    # The named options are:
+    # [properties] Properties hash which allows external configuration of this
+    #              flow.  The flow will side-effect the properties during
+    #              composition, then pass the modified properties along to the
+    #              FlowConnector for execution.  See Cascade#initialize for
+    #              details on how properties are propagated through cascades.
+    # [mode] Mode which will determine the execution mode of this flow.  See
+    #        Mode.parse for details.
     def initialize(name, parent, options = {})
       @sources, @sinks, @incoming_scopes, @outgoing_scopes, @listeners = {}, {}, {}, {}, []
       @properties = options[:properties] || {}
@@ -49,6 +55,11 @@ module Cascading
       sinks[name] = tap
     end
 
+    # Produces a textual description of this Flow.  The description details the
+    # structure of the Flow, its sources and sinks, and the input and output
+    # fields of each Assembly.  The offset parameter allows for this describe
+    # to be nested within a calling context, which lets us indent the
+    # structural hierarchy of a job.
     def describe(offset = '')
       description =  "#{offset}#{name}:flow\n"
       description += "#{sources.keys.map{ |source| "#{offset}  #{source}:source :: #{incoming_scopes[source].values_fields.to_a.inspect}" }.join("\n")}\n"
@@ -69,6 +80,8 @@ module Cascading
       puts "Scope for '#{name}':\n  #{scope}"
     end
 
+    # Builds a map, keyed by sink name, of the sink metadata for each sink.
+    # Currently, this contains only the field names of each sink.
     def sink_metadata
       @sinks.keys.inject({}) do |sink_metadata, sink_name|
         raise "Cannot sink undefined assembly '#{sink_name}'" unless @outgoing_scopes[sink_name]

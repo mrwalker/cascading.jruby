@@ -51,9 +51,10 @@ module Cascading
   # directly building their own cascades and flows so that jading can send them
   # default properties.
 
-  # Builds a top-level cascade given a name and a block.
+  # Builds a top-level Cascade given a name and a block.
   #
   # The named options are:
+  # [properties] See Cascade#initialize
   # [mode] See Cascade#initialize
   #
   # Example:
@@ -77,11 +78,12 @@ module Cascading
     cascade
   end
 
-  # Builds a top-level flow given a name and block for applications built of
+  # Builds a top-level Flow given a name and block for applications built of
   # flows with no cascades.
   #
   # The named options are:
-  # [mode] See Cascade#initialize
+  # [properties] See Flow#initialize
+  # [mode] See Flow#initialize
   #
   # Example:
   #     flow 'wordcount', :mode => :local do
@@ -105,8 +107,8 @@ module Cascading
   end
 
   # Produces a textual description of all Cascades in the global registry.  The
-  # description details structure, sources, sinks, and the input and output
-  # fields of each assembly.
+  # description details the structure of the Cascades, the sources and sinks of
+  # each Flow, and the input and output fields of each Assembly.
   #
   # NOTE: will be moved to Job in later version
   def describe
