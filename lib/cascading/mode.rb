@@ -7,10 +7,13 @@ module Cascading
   class Mode
     attr_reader :local
 
-    # Hadoop mode is the default.  You must explicitly request Cascading local
-    # mode with values 'local' or :local.
+    # Parses a specification of which mode, Cascading local mode or Hadoop mode,
+    # to execute in.  Defaults to Hadoop mode.  You may explicitly request
+    # Cascading local mode with values 'local' or :local.  If you pass a Mode
+    # object to this method, it will be passed through.
     def self.parse(mode)
       case mode
+      when Mode then mode
       when 'local', :local then Mode.new(true)
       else Mode.new(false)
       end
