@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.authors = ["Matt Walker", "Gr\303\251goire Marabout"]
   s.description = "cascading.jruby is a small DSL above Cascading, written in JRuby"
   s.email = "mwalker@etsy.com"
-  s.extra_rdoc_files = ["LICENSE.txt"]
+  s.extra_rdoc_files = ["README.md", "LICENSE.txt"]
   s.files = Dir.glob("lib/**/*.rb")
   s.homepage = "http://github.com/etsy/cascading.jruby"
   s.rdoc_options = ["--main", "README.md"]

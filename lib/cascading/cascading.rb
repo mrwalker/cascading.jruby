@@ -1,5 +1,30 @@
+require 'cascading/cascade'
+require 'cascading/flow'
 require 'cascading/expr_stub'
 
+# The Cascading module contains all of the cascading.jruby DSL.  Inserting the
+# following into your script:
+#     require 'rubygems'
+#     require 'cascading'
+# includes this module at the top level, making all of its features available.
+#
+# To build a dataflow like the one in the README.md or
+# {samples}[http://github.com/mrwalker/cascading.jruby/tree/master/samples],
+# start by looking at Cascade or Flow.  These are the
+# highest level structures you'll use to put together your job.
+#
+# Within a flow, you'll connect sources to sinks by way of Assembly, which
+# refers to "pipe assemblies" from Cascading.  Within an Assembly, you'll use
+# functions and filters (see Operations, IdentityOperations, RegexOperations,
+# FilterOperations, and TextOperations) as well as Assembly#group_by,
+# Assembly#union, and Assembly#join.  You can provide those last pipes with a
+# block that can select operations from Aggregations.
+#
+# Finally, you'll want to address the execution of your job, whether it be
+# locally testing or running remotely on a Hadoop cluster.  See the Mode class
+# for the available modes, and parameterize your script such that it can operate
+# in Cascading local mode locally and in Hadoop mode when run in a jar produced
+# with {Jading}[http://github.com/mrwalker/jading].
 module Cascading
   # Mapping that defines a convenient syntax for specifying Java classes, used
   # in Janino expressions and elsewhere.
@@ -26,8 +51,21 @@ module Cascading
   # directly building their own cascades and flows so that jading can send them
   # default properties.
 
-  # Builds a top-level cascade given a name and a block.  Optionally accepts a
-  # :mode, as explained in Cascading::Cascade#initialize.
+  # Builds a top-level cascade given a name and a block.
+  #
+  # The named options are:
+  # [mode] See Cascade#initialize
+  #
+  # Example:
+  #     cascade 'wordcount', :mode => :local do
+  #       flow 'first_step' do
+  #         ...
+  #       end
+  #
+  #       flow 'second_step' do
+  #         ...
+  #       end
+  #     end
   def cascade(name, options = {}, &block)
     raise "Could not build cascade '#{name}'; block required" unless block_given?
     raise 'Cascading::cascade does not accept the :properties param only the global $jobconf_properties' if options[:properties]
@@ -40,8 +78,21 @@ module Cascading
   end
 
   # Builds a top-level flow given a name and block for applications built of
-  # flows with no cascades.  Optionally accepts a :mode, as explained in
-  # Cascading::Flow#initialize.
+  # flows with no cascades.
+  #
+  # The named options are:
+  # [mode] See Cascade#initialize
+  #
+  # Example:
+  #     flow 'wordcount', :mode => :local do
+  #       assembly 'first_step' do
+  #         ...
+  #       end
+  #
+  #       assembly 'second_step' do
+  #         ...
+  #       end
+  #     end
   def flow(name, options = {}, &block)
     raise "Could not build flow '#{name}'; block required" unless block_given?
     raise 'Cascading::flow does not accept the :properties param only the global $jobconf_properties' if options[:properties]
@@ -53,6 +104,11 @@ module Cascading
     flow
   end
 
+  # Produces a textual description of all Cascades in the global registry.  The
+  # description details structure, sources, sinks, and the input and output
+  # fields of each assembly.
+  #
+  # NOTE: will be moved to Job in later version
   def describe
     Cascade.all.map{ |cascade| cascade.describe }.join("\n")
   end
@@ -63,7 +119,14 @@ module Cascading
     ExprStub.expr(expression, options)
   end
 
-  # Creates a cascading.tuple.Fields instance from a string or an array of strings.
+  # Utility method for creating Cascading c.t.Fields from a field name (string)
+  # or list of field names (array of strings).  If the input fields is already a
+  # c.t.Fields or nil, it is passed through.  This allows for flexible use of
+  # the method at multiple layers in the DSL.
+  #
+  # Example:
+  #     cascading_fields = fields(['first', 'second', 'third'])
+  #     # cascading_fields.to_a == ['first', 'second', 'third']
   def fields(fields)
     if fields.nil?
       return nil
@@ -78,16 +141,24 @@ module Cascading
     return Java::CascadingTuple::Fields.new([fields].flatten.map{ |f| f.kind_of?(Fixnum) ? java.lang.Integer.new(f) : f }.to_java(java.lang.Comparable))
   end
 
+  # Convenience method wrapping c.t.Fields::ALL
   def all_fields
     Java::CascadingTuple::Fields::ALL
   end
 
+  # Convenience method wrapping c.t.Fields::VALUES
   def last_grouping_fields
     Java::CascadingTuple::Fields::VALUES
   end
 
   # Computes fields formed by removing remove_fields from base_fields.  Operates
   # only on named fields, not positional fields.
+  #
+  # Example:
+  #     base_fields = fields(['a', 'b', 'c'])
+  #     remove_fields = fields(['b'])
+  #     result_fields = difference_fields(base_fields, remove_fields)
+  #     # results_fields.to_a == ['a', 'c']
   def difference_fields(base_fields, remove_fields)
     fields(base_fields.to_a - remove_fields.to_a)
   end
@@ -102,6 +173,13 @@ module Cascading
 
   # Helper used by dedup_fields that operates on arrays of field names rather
   # than fields objects.
+  #
+  # Example:
+  #     left_names = ['a', 'b']
+  #     mid_names = ['a', 'c']
+  #     right_names = ['a', 'd']
+  #     deduped_names = dedup_field_names(left_names, mid_names, right_names)
+  #     # deduped_names == ['a', 'b', 'a_', 'c', 'a__', 'd']
   def dedup_field_names(*names)
     names.inject([]) do |acc, arr|
       acc + arr.map{ |e| search_field_name(acc, e) }
@@ -114,15 +192,14 @@ module Cascading
   private :search_field_name
 
   # Creates a TextLine scheme (can be used in both Cascading local and hadoop
-  # modes).  Positional args are used if <tt>:source_fields</tt> is not
-  # provided.
+  # modes).  Positional args are used if :source_fields is not provided.
   #
   # The named options are:
   # [source_fields] Fields to be read from a source with this scheme.  Defaults
   #                 to ['offset', 'line'].
   # [sink_fields] Fields to be written to a sink with this scheme.  Defaults to
   #               all_fields.
-  # [compression] A symbol, either <tt>:enable</tt> or <tt>:disable</tt>, that
+  # [compression] A symbol, either :enable or :disable, that
   #               governs the TextLine scheme's compression.  Defaults to the
   #               default TextLine compression (only applies to c.s.h.TextLine).
   def text_line_scheme(*args_with_options)
@@ -151,15 +228,28 @@ module Cascading
     }
   end
 
+  # Convenience access to MultiTap.multi_source_tap.  This constructor is more
+  # "DSL-like" because it allows you to pass taps directly as actual args rather
+  # than in an array:
+  #     multi_source_tap tap1, tap2, tap3, ..., tapn
+  #
+  # See MultiTap.multi_source_tap for more details.
   def multi_source_tap(*taps)
     MultiTap.multi_source_tap(taps)
   end
 
+  # Convenience access to MultiTap.multi_sink_tap.  This constructor is more
+  # "DSL-like" because it allows you to pass taps directly as actual args rather
+  # than in an array:
+  #     multi_sink_tap tap1, tap2, tap3, ..., tapn
+  #
+  # See MultiTap.multi_sink_tap for more details.
   def multi_sink_tap(*taps)
     MultiTap.multi_sink_tap(taps)
   end
 
-  # Creates a Cascading::Tap given a path and optional :scheme and :sink_mode.
+  # Convenience constructor for a Tap, that accepts the same options as that
+  # class' constructor.  See Tap for more details.
   def tap(path, options = {})
     Tap.new(path, options)
   end
