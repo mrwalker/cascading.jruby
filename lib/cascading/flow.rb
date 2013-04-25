@@ -33,6 +33,27 @@ module Cascading
       self.class.add(name, self)
     end
 
+    # Builds a child Assembly in this Flow given a name and block.
+    #
+    # An assembly's name is quite important as it will determine:
+    # * The sources from which it will read, if any
+    # * The name to be used in joins or unions downstream
+    # * The name to be used to sink the output of the assembly downstream
+    #
+    # Many assemblies may be built within a flow.  The Assembly#branch method
+    # is used for creating nested assemblies and produces objects of the same
+    # type as this constructor.
+    #
+    # Example:
+    #     flow 'wordcount', :mode => :local do
+    #       assembly 'first_step' do
+    #         ...
+    #       end
+    #
+    #       assembly 'second_step' do
+    #         ...
+    #       end
+    #     end
     def assembly(name, &block)
       raise "Could not build assembly '#{name}'; block required" unless block_given?
       assembly = Assembly.new(name, self, @outgoing_scopes)
@@ -68,12 +89,20 @@ module Cascading
       description
     end
 
+    # Accesses the outgoing scope of this Flow at the point at which it is
+    # called by default, or for the child specified by the given name, if
+    # specified.  This is useful for grabbing the values_fields at any point in
+    # the construction of the Flow.  See Scope for details.
     def scope(name = nil)
       raise 'Must specify name if no children have been defined yet' unless name || last_child
       name ||= last_child.name
       @outgoing_scopes[name]
     end
 
+    # Prints information about the scope of this Flow at the point at which it
+    # is called by default, or for the child specified by the given name, if
+    # specified.  This allows you to trace the propagation of field names
+    # through your job and is handy for debugging.  See Scope for details.
     def debug_scope(name = nil)
       scope = scope(name)
       name ||= last_child.name
@@ -92,7 +121,16 @@ module Cascading
       end
     end
 
-    # TODO: support all codecs, support list of codecs
+    # Property modifier that sets the codec and type of the compression for all
+    # sinks in this flow.  Currently only supports o.a.h.i.c.DefaultCodec and
+    # o.a.h.i.c.GzipCodec, and the the NONE, RECORD, or BLOCK compressions
+    # types defined in o.a.h.i.SequenceFile.
+    #
+    # codec may be symbols like :default or :gzip and type may be symbols like
+    # :none, :record, or :block.
+    #
+    # Example:
+    #     compress_output :default, :block
     def compress_output(codec, type)
       properties['mapred.output.compress'] = 'true'
       properties['mapred.output.compression.codec'] = case codec
@@ -108,22 +146,28 @@ module Cascading
         end
     end
 
+    # Set the cascading.spill.list.threshold property in this flow's
+    # properties.  See c.t.c.SpillableProps for details.
     def set_spill_threshold(threshold)
-      properties['cascading.cogroup.spill.threshold'] = threshold.to_s
+      properties['cascading.spill.list.threshold'] = threshold.to_s
     end
 
+    # Adds the given path to the mapred.cache.files list property.
     def add_file_to_distributed_cache(file)
       add_to_distributed_cache(file, "mapred.cache.files")
     end
 
+    # Adds the given path to the mapred.cache.archives list property.
     def add_archive_to_distributed_cache(file)
       add_to_distributed_cache(file, "mapred.cache.archives")
     end
 
+    # Appends a FlowListener to the list of listeners for this flow.
     def add_listener(listener)
       @listeners << listener
     end
 
+    # Handles locating a file cached from S3 on local disk.  TODO: remove
     def emr_local_path_for_distributed_cache_file(file)
       # NOTE this needs to be *appended* to the property mapred.local.dir
       if file =~ /^s3n?:\/\//
@@ -135,16 +179,9 @@ module Cascading
       end
     end
 
-    def add_to_distributed_cache(file, property)
-      v = properties[property]
-
-      if v
-        properties[property] = [v.split(/,/), file].flatten.join(",")
-      else
-        properties[property] = file
-      end
-    end
-
+    # Connects this Flow, producing a c.f.Flow without completing it (the Flow
+    # is not executed).  This method is used by Cascade to connect its child
+    # Flows.  To connect and complete a Flow, see Flow#complete.
     def connect
       puts "Connecting flow '#{name}' with properties:"
       properties.keys.sort.each do |key|
@@ -162,6 +199,9 @@ module Cascading
       mode.connect_flow(properties, name, sources, sinks, pipes)
     end
 
+    # Completes this Flow after connecting it.  This results in execution of
+    # the c.f.Flow built from this Flow.  Use this method when executing a
+    # top-level Flow.
     def complete
       begin
         flow = connect
@@ -173,6 +213,16 @@ module Cascading
     end
 
     private
+
+    def add_to_distributed_cache(file, property)
+      v = properties[property]
+
+      if v
+        properties[property] = [v.split(/,/), file].flatten.join(",")
+      else
+        properties[property] = file
+      end
+    end
 
     def make_tap_parameter(taps, pipe_accessor)
       taps.inject({}) do |map, (name, tap)|

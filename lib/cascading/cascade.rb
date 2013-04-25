@@ -17,7 +17,7 @@ module Cascading
     # Do not use this constructor directly; instead, use Cascading::cascade to
     # build cascades.
     #
-    # Builds a Cascade given the specified name.
+    # Builds a Cascade given a name.
     #
     # The named options are:
     # [properties] Properties hash which will be used as the default properties

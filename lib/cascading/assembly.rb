@@ -35,6 +35,16 @@ module Cascading
   class Assembly < Cascading::Node
     attr_reader :head_pipe, :tail_pipe
 
+    # Do not use this constructor directly; instead, use Flow#assembly or
+    # Assembly#branch to build assemblies.
+    #
+    # Builds an Assembly given a name, parent, and optional outgoing_scopes
+    # (necessary only for branching).
+    #
+    # An assembly's name is quite important as it will determine:
+    # * The sources from which it will read, if any
+    # * The name to be used in joins or unions downstream
+    # * The name to be used to sink the output of the assembly downstream
     def initialize(name, parent, outgoing_scopes = {})
       super(name, parent)
 
@@ -248,7 +258,29 @@ module Cascading
       join(*args_with_options, &block)
     end
 
-    # Builds a new branch.
+    # Builds a child Assembly that branches this Assembly given a name and
+    # block.
+    #
+    # An assembly's name is quite important as it will determine:
+    # * The sources from which it will read, if any
+    # * The name to be used in joins or unions downstream
+    # * The name to be used to sink the output of the assembly downstream
+    #
+    # Many branches may be built within an assembly.  The result of a branch is
+    # the same as the Flow#assembly constructor, an Assembly object.
+    #
+    # Example:
+    #     assembly 'some_work' do
+    #       ...
+    #
+    #       branch 'more_work' do
+    #         ...
+    #       end
+    #
+    #       branch 'yet_more_work' do
+    #         ...
+    #       end
+    #     end
     def branch(name, &block)
       raise "Could not build branch '#{name}'; block required" unless block_given?
       assembly = Assembly.new(name, self, @outgoing_scopes)
