@@ -1,24 +1,25 @@
 # -*- encoding: utf-8 -*-
+#$: << File.join(File.dirname(__FILE__), '..', 'lib')
+#require 'cascading'
 
 Gem::Specification.new do |s|
   s.name = "cascading.jruby"
-  s.version = "1.0.0"
-
-  s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = ["Matt Walker", "Gr\303\251goire Marabout"]
-  s.description = "cascading.jruby is a small DSL above Cascading, written in JRuby"
-  s.email = "mwalker@etsy.com"
-  s.extra_rdoc_files = ["README.md", "LICENSE.txt"]
-  s.files = Dir.glob("lib/**/*.rb")
-  s.homepage = "http://github.com/etsy/cascading.jruby"
-  s.rdoc_options = ["--main", "README.md"]
-  s.require_paths = ["lib"]
-  s.rubyforge_project = "cascading.jruby"
-  s.rubygems_version = "1.8.21"
+  # TODO: in 2.0.0, Job will encapsulate Cascading module, so we can directly
+  # grab the version from there; for now, just hack it
+  #s.version = Cascading::VERSION
+  s.version = '1.0.0'
+  s.date = Time.now.strftime('%Y-%m-%d')
   s.summary = "A JRuby DSL for Cascading"
-  s.test_files = Dir.glob("test/**/*.rb")
+  s.homepage = "http://github.com/mrwalker/cascading.jruby"
+  s.email = "matt.r.walker@gmail.com"
+  s.authors = ["Matt Walker", "Gr\303\251goire Marabout"]
 
-  if s.respond_to? :specification_version then
-    s.specification_version = 3
-  end
+  s.files = Dir.glob("lib/**/*.rb")
+  s.test_files = Dir.glob("test/**/*.rb")
+  s.require_paths = ["lib"]
+
+  s.rdoc_options = ["--main", "README.md"]
+  s.extra_rdoc_files = ["README.md", "LICENSE.txt"]
+
+  s.description = "cascading.jruby is a small DSL above Cascading, written in JRuby"
 end
