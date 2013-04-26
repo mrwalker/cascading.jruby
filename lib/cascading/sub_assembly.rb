@@ -4,17 +4,15 @@ module Cascading
   # Allows you to plugin c.p.SubAssemblies to a cascading.jruby Assembly.
   #
   # Assumptions:
-  # * You will either use the tail_pipe of the calling Assembly, or overwrite
-  # its incoming_scopes (as do join and union)
-  # * Your subassembly will have only 1 tail pipe; branching is not
-  # supported.  This allows you to continue operating upon the tail of the
-  # SubAssembly within the calling Assembly
+  # * You will either use the tail_pipe of the calling Assembly, or overwrite its incoming_scopes (as do join and union)
+  # * Your subassembly will have only 1 tail pipe; branching is not supported.  This allows you to continue operating upon the tail of the SubAssembly within the calling Assembly
   # * You will not use nested c.p.SubAssemblies
   #
   # This is a low-level tool, so be careful.
   class SubAssembly
     attr_reader :assembly, :sub_assembly, :tail_pipe, :scope
 
+    # Construct a SubAssembly within the given Assembly
     def initialize(assembly, sub_assembly)
       @assembly = assembly
       @sub_assembly = sub_assembly
@@ -26,6 +24,11 @@ module Cascading
       raise 'SubAssembly must set exactly 1 tail in constructor' unless sub_assembly.tails.size == 1
     end
 
+    # Complete the addition of the SubAssembly to the Assembly.  Propagates
+    # Scope through the SubAssembly and updates the tail_pipe of the
+    # SubAssembly for passing back to the enclosing Assembly.  May accept many
+    # incoming pipes, but typically only recieves the tail_pipe of the
+    # enclosing Assembly.
     def finalize(pipes, incoming_scopes)
       # Build adjacency list for sub_assembly
       graph = {}

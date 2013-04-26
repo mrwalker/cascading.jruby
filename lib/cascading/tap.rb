@@ -2,7 +2,7 @@ module Cascading
   # A BaseTap wraps up a pair of Cascading taps, one for Cascading local mode
   # and the other for Hadoop mode.  Note that these are optional, but at least
   # one must be provided for most taps.  A SequenceFile is a notable example of
-  # a Scheme for which their is no Cascading local mode version, so a Tap you
+  # a Scheme for which there is no Cascading local mode version, so a Tap you
   # build with it will have no local_tap.
   class BaseTap
     attr_reader :local_tap, :hadoop_tap
