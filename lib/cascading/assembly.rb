@@ -325,6 +325,7 @@ module Cascading
     #         count
     #         sum 'val1', 'val2', :type => :long
     #       end
+    #       discard 'const'
     #     end
     def group_by(*args_with_options, &block)
       options, group_fields = args_with_options.extract_options!, fields(args_with_options)
