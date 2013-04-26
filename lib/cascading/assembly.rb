@@ -108,8 +108,9 @@ module Cascading
     # assembly names to join and :on to specify the join_fields.  Note that a
     # hash_join "takes over" the Assembly in which it is built, so it is
     # typically the first statement within the block of the assembly or branch.
-    # The block passed to this method will be evaluated in the context of
-    # Aggregations, not Assembly.
+    # Additionally, a hash join does not accept a block for aggregations like
+    # other joins; this restriction is enforced here, but comes directly from
+    # Cascading.
     #
     # The named options are:
     # [on] The keys of the join, an array of strings if they are the same in
@@ -128,14 +129,14 @@ module Cascading
     #
     # Example:
     #     assembly 'join_left_right' do
-    #       hash_join 'left', 'right', :on => ['key1', 'key2'], :joiner => :inner do
-    #         sum 'val1', 'val2', :type => :long
-    #       end
+    #       hash_join 'left', 'right', :on => ['key1', 'key2'], :joiner => :inner
     #     end
-    def hash_join(*args_with_options, &block)
+    def hash_join(*args_with_options)
+      raise ArgumentError, "HashJoin doesn't support aggregations so the block provided to hash_join will be ignored" if block_given?
+
       options, assembly_names = args_with_options.extract_options!, args_with_options
       options[:hash] = true
-      prepare_join(assembly_names, options, &block)
+      prepare_join(assembly_names, options)
     end
 
     # Builds a join (CoGroup) pipe. Requires a list of assembly names to join
@@ -552,7 +553,6 @@ module Cascading
       end
 
       if is_hash_join
-        raise ArgumentError, "hash joins don't support aggregations" if block_given?
         parameters = [
           pipes.to_java(Java::CascadingPipe::Pipe),
           group_fields,

@@ -15,7 +15,7 @@ module Cascading
   #
   # Externally enforced rules:
   # * May be empty (in which case, Aggregations is not instantiated)
-  # * Must follow a GroupBy or CoGroup (not a Join or Merge)
+  # * Must follow a GroupBy or CoGroup (not a HashJoin or Merge)
   #
   # Optimizations:
   # * If the leading Group is a GroupBy and all subsequent Everies are Aggregators that have a corresponding AggregateBy, Aggregations can replace the GroupBy/Aggregator pipe with a single composite AggregateBy

@@ -547,7 +547,7 @@ class TC_Assembly < Test::Unit::TestCase
         end
       end
     end
-    assert_equal "hash joins don't support aggregations", ex.message
+    assert_equal "HashJoin doesn't support aggregations so the block provided to hash_join will be ignored", ex.message
   end
 
   def test_branch_unique
