@@ -3,15 +3,15 @@ module Cascading
     attr_accessor :expression, :types, :input_expression
 
     # ExprStub requires a Janino expression decorated with field types.  For
-    # example: '"Found: " + (x:int + y:int) + " " + z:string'.  Type names are
-    # defined in Cascading::JAVA_TYPE_MAP.
+    # example:
+    #     expr('"Found: " + (x:int + y:int) + " " + z:string')
+    # Type names are defined in Cascading::JAVA_TYPE_MAP.
     def initialize(expression)
       @input_expression = expression
       @expression = expression.dup
       @types = {}
 
       # Simple regexp based parser for types
-
       JAVA_TYPE_MAP.each do |sym, klass|
         @expression.gsub!(/[A-Za-z0-9_]+:#{sym.to_s}/) do |match|
           name = match.split(/:/).first.gsub(/\s+/, "")
@@ -21,22 +21,33 @@ module Cascading
       end
     end
 
-    # Extract Java names and types from @types hash
+    # Extract Java names and types from @types hash.  Cascading constructors
+    # often require two separate Java Arrays in this fashion.
     def names_and_types
       names, types = split_hash(@types)
       [names.to_java(java.lang.String), types.to_java(java.lang.Class)]
     end
 
+    # Prints the original input expression.
     def to_s
       @input_expression
     end
 
     # Convenience constructor for an ExprStub that optionally performs
     # validation.  Takes a string to use as a Janino expression and an optional
-    # options hash.  By default, the param :validate is set to true (performs
-    # expression validation using default actual argument values) and the param
-    # :validate_with is set to {} (which doesn't override any of the default
-    # actual argument values used for validation).
+    # options hash.
+    #
+    # The named options are:
+    # [validate] A boolean indicating whether expression validation using
+    #            default actual argument values should be performed.  Defaults
+    #            to true.
+    # [validate_with] A hash mapping field names (or symbols) to the value that
+    #                 should be used for validation.  Strings default to nil,
+    #                 so if you have previously filtered nulls you might use a
+    #                 marker value like 'nulls_filtered'.  Defaults to {}.
+    #
+    # Example:
+    #     insert 'x_eq_y' => expr('x:string.equals(y:string)', :validate_with => { :x => 'nulls_filtered' })
     def self.expr(expression, options = {})
       options = { :validate => true, :validate_with => {} }.merge(options)
       expr_stub = expression.kind_of?(ExprStub) ? expression : ExprStub.new(expression).compile
@@ -74,6 +85,9 @@ module Cascading
       self.eval(test_values.merge(actual_args))
     end
 
+    # Given a scope, validates that the fields required by this ExprStub are
+    # available in the values fields of the scope.  Returns those values fields
+    # which are unused in the expression.
     def validate_scope(scope)
       validate_fields(scope.values_fields.to_a)
     end

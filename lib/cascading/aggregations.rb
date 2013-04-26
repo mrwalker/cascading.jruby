@@ -231,7 +231,7 @@ module Cascading
     # [mapping] Map of input to output field names if renaming is desired.
     #           Results in output fields sorted by input field.
     # [type] Controls the type of the output, specified using values from the
-    #        JAVA_TYPE_MAP as in Janino expressions (:double, :long, etc.)
+    #        Cascading::JAVA_TYPE_MAP as in Janino expressions (:double, :long, etc.)
     #
     # Examples:
     #     assembly 'aggregate' do
