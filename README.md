@@ -28,7 +28,7 @@ end.complete
 
 cascading.jruby provides a clean Ruby interface to Cascading, but doesn't attempt to add abstractions on top of it.  Therefore, you should be acquainted with the [Cascading](http://docs.cascading.org/cascading/2.0/userguide/html/) [API](http://docs.cascading.org/cascading/2.0/javadoc/) before you begin.
 
-For operations you can apply to your dataflow within a pipe assembly, see the [Assembly](http://rubydoc.info/gems/cascading.jruby/0.0.10/Cascading/Assembly) class.  For operations available within a block passed to a group_by, union, or join, see the [Aggregations](http://rubydoc.info/gems/cascading.jruby/0.0.10/Cascading/Aggregations) class.
+For operations you can apply to your dataflow within a pipe assembly, see the [Assembly](http://rubydoc.info/gems/cascading.jruby/1.0.0/Cascading/Assembly) class.  For operations available within a block passed to a group_by, union, or join, see the [Aggregations](http://rubydoc.info/gems/cascading.jruby/1.0.0/Cascading/Aggregations) class.
 
 Note that the Ruby code you write merely constructs a Cascading job, so no JRuby runtime is required on your cluster.  This stands in contrast with writing [Hadoop streaming jobs in Ruby](http://www.quora.com/How-do-the-different-options-for-Ruby-on-Hadoop-compare).  To run cascading.jruby applications on a Hadoop cluster, you must use [Jading](https://github.com/mrwalker/jading) to package them into a job jar.
 
