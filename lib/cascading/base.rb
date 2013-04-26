@@ -1,7 +1,22 @@
 module Cascading
+  # A Node is a Cascade, Flow, or Assembly, all of which are composite
+  # structures that describe the hierarchical structure of your job.  A Cascade
+  # may contain many Flows and a Flow and Assembly may contain many Assemblies
+  # (branches in the case of the Assembly).  Nodes are named, contain parent
+  # and child pointers, and keep track of their children both by name and by
+  # insertion order.
+  #
+  # Nodes must be uniquely named within the scope of their parent so that they
+  # unambiguously looked up for connecting pipes within a flow.  However, we
+  # only ensure that children are uniquely named upon insertion; full
+  # uniqueness isn't required until Node#find_child is called (this allows for
+  # name reuse in a few limited circumstances that was important when migrating
+  # the Etsy workload to enforce these constraints).
   class Node
     attr_accessor :name, :parent, :children, :child_names, :last_child
 
+    # A Node requires a name and a parent when it is constructed.  Children are
+    # added later with Node#add_child.
     def initialize(name, parent)
       @name = name
       @parent = parent
@@ -23,10 +38,15 @@ module Cascading
       node
     end
 
+    # The qualified name of a node is formed from the name of all nodes in the
+    # path from the root to that node.
     def qualified_name
       parent ? "#{parent.qualified_name}.#{name}" : name
     end
 
+    # Produces a textual description of this Node.  This method is overridden
+    # by all classes inheriting Node, so it serves mainly as a template for
+    # describing a node with children.
     def describe(offset = '')
       "#{offset}#{name}:node\n#{child_names.map{ |child| children[child].describe("#{offset}  ") }.join("\n")}"
     end
@@ -44,6 +64,8 @@ module Cascading
       all_children_with_name.first
     end
 
+    # Returns the root Node, the topmost parent of the hierarchy (typically a
+    # Cascade or Flow).
     def root
       return self unless parent
       parent.root
