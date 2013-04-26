@@ -1,9 +1,8 @@
 module Cascading
-  # A Cascading::Mode encapsulates the idea of the execution mode for your
-  # flows.  The default is Hadoop mode, but you can request that your code run
-  # in Cascading local mode.  If you subsequently use a tap or a scheme that
-  # has no local implementation, the mode will be converted back to Hadoop
-  # mode.
+  # A Mode encapsulates the idea of the execution mode for your flows.  The
+  # default is Hadoop mode, but you can request that your code run in Cascading
+  # local mode.  If you subsequently use a tap or a scheme that has no local
+  # implementation, the mode will be converted back to Hadoop mode.
   class Mode
     attr_reader :local
 
@@ -19,6 +18,8 @@ module Cascading
       end
     end
 
+    # Constructs a Mode given a flag indicating if it should be Cascading local
+    # mode.
     def initialize(local)
       @local = local
     end
@@ -37,9 +38,9 @@ module Cascading
     end
 
     # Builds a c.f.Flow given properties, name, sources, sinks, and pipes from
-    # a Cascading::Flow.  The current mode is adjusted based on the taps and
-    # schemes of the sources and sinks, then the correct taps are selected
-    # before building the flow.
+    # a Flow.  The current mode is adjusted based on the taps and schemes of
+    # the sources and sinks, then the correct taps are selected before building
+    # the flow.
     def connect_flow(properties, name, sources, sinks, pipes)
       update_local_mode(sources, sinks)
       sources = select_taps(sources)
