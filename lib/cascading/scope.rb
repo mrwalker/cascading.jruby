@@ -1,5 +1,5 @@
 module Cascading
-  # Scope is a wrapper for a the private Cascading c.f.p.Scope object used to
+  # Scope is a wrapper for the private Cascading c.f.p.Scope object used to
   # connect the dataflow graph by resolving fields.  cascading.jruby wraps this
   # facility so that it may be used to propagate field names at composition
   # time (not Cascading plan time) in the same way they will later be
